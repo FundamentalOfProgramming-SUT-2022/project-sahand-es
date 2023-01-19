@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <direct.h>
+#include <windows.h>
 
 #define SIZE 500
 
@@ -167,53 +168,62 @@ void remove_str(const char address[], int line, int position, int size, char b_f
 
     FILE *file_to_read = fopen(name, "r");
 
-    while ((c = fgetc(file_to_read)) != EOF)
+    while (c != EOF)
     {
-        final_string[iter] = c;
-        if((position_counter == position - 1 && line_counter == line) || (position == 0 && line_counter == line && !flag))
+        while(line_counter != line)
+            {
+                c = getc(file_to_read);
+                strncat(final_string, &c, 1);
+                if(c == '\n')
+                {
+                    line_counter++;
+                }
+                if(c == EOF)
+                {
+                    printf("ERORR: Empty line.\n");
+                    return;
+                }
+            }
+        while(position_counter != position)
+        {
+            position_counter++;
+            c = getc(file_to_read);
+            if(c == EOF)
+            {
+                break;
+            }
+            strncat(final_string, &c, 1);
+        }
+        if(!flag)
         {
             flag = 1;
             switch (b_f_flag)
             {
-                case 'b':
+                case 'f':
                 {
-                    for(int i = 0; i < size; i++)
+                    for (int i = 0; i < size; i++)
                     {
-                        if(iter)
-                        {
-                            final_string[iter] = '\0';
-                            iter--;
-                        }
+                        c = getc(file_to_read);
                     }
                     break;
                 }
-                case 'f':
+                case 'b':
                 {
-                    final_string[iter] = '\0';
-                    for(int i = 0; i < size - 1; i++)
+                    int l = strlen(final_string) - 1;
+                    for (int i = 0; i < size; i++)
                     {
-                        fgetc(file_to_read);
+                        final_string[l - i] = '\0';
                     }
-                    iter--;
                     break;
                 }
             }
         }
-        else if(c == '\n')
+        c = getc(file_to_read);
+        if(c == EOF)
         {
-            line_counter++;
-            position_counter = 0;
-            iter++;
-            continue;
+            break;
         }
-        position_counter++;
-        iter++;
-
-    }
-    if (!flag)
-    {
-        printf("ERROR: Invalid position for remove.\n");
-        return;
+        strncat(final_string, &c, 1);
     }
 
     FILE *file_to_write = fopen(name, "w");
@@ -225,11 +235,110 @@ void remove_str(const char address[], int line, int position, int size, char b_f
 
 }
 
+void copy_str(const char address[], int line, int position, int size, char b_f_flag)
+{
+    line--;
+    char c;
+    char temp[SIZE] = {'\0'};
+    char text[SIZE] = {'\0'}, *name = (char*) address + 1;
+    int line_counter = 0, position_counter = 0;
+    if(!file_exists(name))
+    {
+        printf("file with this name does not exists.\n");
+        return;
+    }
+
+    FILE *file_to_read = fopen(name, "r");
+
+    while(line_counter != line)
+    {
+        c = getc(file_to_read);
+        strncat(temp, &c, 1);
+        if(c == '\n')
+        {
+            line_counter++;
+        }
+        if(c == EOF)
+        {
+            printf("ERORR: Empty line.\n");
+            return;
+        }
+    }
+    switch (b_f_flag)
+    {
+        case 'f':
+        {
+            for(int i = 0; i < size; i++)
+            {
+                while(position_counter != position)
+                {
+                    position_counter++;
+                    c = getc(file_to_read);
+                }
+                c = getc(file_to_read);
+                if(c == EOF)
+                {
+                    break;
+                }
+                text[i] = c;
+            }
+            break;
+        }
+        case 'b':
+        {
+            while(position_counter != position)
+            {
+                position_counter++;
+                c = getc(file_to_read);
+                strncat(temp, &c, 1);
+            }
+            int ii = 0;
+            for(int i = size - 1; i >= 0; i--)
+            {
+                int l = strlen(temp);
+                text[ii] = temp[strlen(temp) - i - 1];
+                ii++;
+            }
+
+            break;
+        }
+    }
+
+    //clipboard:
+
+    const size_t len = strlen(text) + 1;
+    HGLOBAL hMem =  GlobalAlloc(GMEM_MOVEABLE, len);
+    memcpy(GlobalLock(hMem), text, len);
+    GlobalUnlock(hMem);
+    OpenClipboard(0);
+    EmptyClipboard();
+    SetClipboardData(CF_TEXT, hMem);
+    CloseClipboard();
+}
+
+void cut_str(const char address[], int line, int position, int size, char b_f_flag)
+{
+    copy_str(address, line, position, size, b_f_flag);
+    remove_str(address, line, position, size, b_f_flag);
+}
+
+void paste(const char address[], int line, int position)
+{
+    char text[SIZE] = {'\0'};
+    OpenClipboard(0);
+    strcpy(text ,(char*) GetClipboardData(CF_TEXT));
+    CloseClipboard();
+    insert_str(address, text, line, position);
+}
+
 //int main()
 //{
 //    char address[SIZE] = "/root/dir1/temp/file1.txt";
 //    create_file(address);
 //    insert_str(address, "salam\nkhobi?", 1, 0);
-//    remove_str(address, 1, 7, 40, 'f');
+//    remove_str(address, 1, 0, 15, 'f');
+//    cut_str(address, 1, 0, 20, 'f');
+//    paste(address, 1, 0);
 //    cat(address);
+//
 //}
