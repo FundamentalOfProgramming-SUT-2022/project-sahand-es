@@ -58,14 +58,12 @@ void create_file(char address[])
 
 }
 
-void insert_str(char address[], char string[SIZE], int line, int position)
+void insert_str(const char address[],const char string[], int line, int position)
 {
     line--;
     int count = strlen(string), i = 0, j = 0, place = 0;
-    int address_len = strlen(address);
-    address[strlen(address)] = '\0';
-    char c, *name = address + 1;
-    char *final_string = (char*) calloc(SIZE, sizeof (char));
+    char c, *name = (char*) address + 1;
+    char final_string[SIZE] = {'\0'};
 
     if(!file_exists(name))
     {
@@ -103,10 +101,12 @@ void insert_str(char address[], char string[SIZE], int line, int position)
             continue;
 
         }
-        else if(position_counter == position - 1 && line_counter == line && flag)
+        else if(position_counter == position && line_counter == line && flag)
         {
+            final_string[iter] = '\0';
             strcat(final_string, string);
             iter += count;
+            final_string[iter] = c;
             flag = 0;
         }
         position_counter++;
@@ -135,3 +135,101 @@ void insert_str(char address[], char string[SIZE], int line, int position)
     fclose(file_to_write);
     fclose(file_to_read);
 }
+
+void cat(const char address[])
+{
+    char *name = (char*) address + 1, c;
+    if(!file_exists(name))
+    {
+        printf("file with this name does not exists.\n");
+        return;
+    }
+
+    FILE *file_to_read = fopen(name, "r");
+
+    while ((c = fgetc(file_to_read)) != EOF)
+    {
+        printf("%c", c);
+    }
+}
+
+void remove_str(const char address[], int line, int position, int size, char b_f_flag)
+{
+    line--;
+    char final_string[SIZE] = {'\0'};
+    char*name = (char*) address + 1, c;
+    if(!file_exists(name))
+    {
+        printf("file with this name does not exists.\n");
+        return;
+    }
+    int line_counter = 0, position_counter = 0, iter = 0, flag = 0;
+
+    FILE *file_to_read = fopen(name, "r");
+
+    while ((c = fgetc(file_to_read)) != EOF)
+    {
+        final_string[iter] = c;
+        if((position_counter == position - 1 && line_counter == line) || (position == 0 && line_counter == line && !flag))
+        {
+            flag = 1;
+            switch (b_f_flag)
+            {
+                case 'b':
+                {
+                    for(int i = 0; i < size; i++)
+                    {
+                        if(iter)
+                        {
+                            final_string[iter] = '\0';
+                            iter--;
+                        }
+                    }
+                    break;
+                }
+                case 'f':
+                {
+                    final_string[iter] = '\0';
+                    for(int i = 0; i < size - 1; i++)
+                    {
+                        fgetc(file_to_read);
+                    }
+                    iter--;
+                    break;
+                }
+            }
+        }
+        else if(c == '\n')
+        {
+            line_counter++;
+            position_counter = 0;
+            iter++;
+            continue;
+        }
+        position_counter++;
+        iter++;
+
+    }
+    if (!flag)
+    {
+        printf("ERROR: Invalid position for remove.\n");
+        return;
+    }
+
+    FILE *file_to_write = fopen(name, "w");
+
+    fprintf(file_to_write, "%s", final_string);
+
+    fclose(file_to_write);
+    fclose(file_to_read);
+
+}
+
+//int main()
+//{
+//    char address[SIZE] = "/root/dir1/temp/file1.txt";
+//    create_file(address);
+//    insert_str(address, "salam\nkhobi?", 1, 0);
+//    remove_str(address, 1, 7, 40, 'f');
+//    cat(address);
+//}
