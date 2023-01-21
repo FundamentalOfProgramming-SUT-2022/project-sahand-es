@@ -9,7 +9,10 @@
 #include <direct.h>
 #include <windows.h>
 
-#define SIZE 500
+
+#define SIZE 1000
+
+enum find_type{COUNT = 1, AT = 1 << 1, BYWORD = 1 << 2, ALL = 1 << 3};
 
 int file_exists(const char address[])
 {
@@ -331,14 +334,241 @@ void paste(const char address[], int line, int position)
     insert_str(address, text, line, position);
 }
 
+char* regex_build(const char* searchfor)
+{
+    char* expression = calloc(SIZE, sizeof (char));
+    const char wildcard[5] = "\\w*";
+    const char star = '*';
+    if(searchfor[0] == '*')
+    {
+        strcat(expression, wildcard);
+    }
+    else
+    {
+        strncat(expression, &searchfor[0], 1);
+    }
+    for(int i = 1; i < strlen(searchfor); i++)
+    {
+        if(searchfor[i] == '*')
+        {
+            if(searchfor[i-1] != '\\')
+            {
+                strcat(expression, wildcard);
+            }
+            if(searchfor[i-1] == '\\')
+            {
+                strncat(expression, &star, 1);
+            }
+        }
+        else  if(searchfor[i] == '\\')
+        {
+            if(i == strlen(searchfor) - 1 || searchfor[i+1] != '*')
+            {
+                strncat(expression, &searchfor[i], 1);
+            }
+        }
+        else
+        {
+            strncat(expression, &searchfor[i], 1);
+        }
+    }
+    return expression;
+}
+
+int is_wildcard(const char* expression)
+{
+    const char wildcard[5] = "\\w*";
+    for(int i = 0; i < 3; i++)
+    {
+        if(expression[i] != wildcard[i])
+            return 0;
+    }
+    return 1;
+}
+
+int byword(const char text[], int offset)
+{
+    int count = 0;
+    for(int i = 0; i < offset; i++)
+    {
+        if ((text[i] == ' ' || text[i] == '\n')&& text[i+1] != ' ')
+            count++;
+    }
+    return count + 1;
+}
+
+int is_seperator(char c)
+{
+    if(c == ' ' || c == EOF || c == '\n')
+        return 1;
+    return 0;
+}
+
+int **regex(const char address[], const char pattern[])
+{
+    char *name = (char*) address + 1;
+    char c;
+    char text[SIZE] = {'\0'};
+    int nmatch = 1, regex_iter = 0, regex_len = 0, match_start = -1;
+    char regex[SIZE + 1] = {'\0'};
+    strcpy(regex, regex_build(pattern));
+    regex_len = strlen(regex);
+
+    int **result = (int**) calloc(SIZE, sizeof(int*));
+    for(int i = 0; i < SIZE; i++)
+    {
+        *(result + i) = (int*) calloc(3, sizeof (int));
+    }
+
+    FILE *file_to_read = fopen(name, "r");
+
+    while((c = getc(file_to_read)) != EOF)
+    {
+        strncat(text, &c, 1);
+    }
+
+    for(int i = 0;text[i] != '\0'; i++)
+    {
+
+        if(regex_iter == regex_len)
+        {
+           result[nmatch][0] = match_start + 1;
+            result[nmatch][1] = i;
+            result[nmatch][2] = byword(text,match_start);
+            nmatch++;
+            regex_iter = 0;
+            match_start = i;
+        }
+        if(!is_wildcard(regex + regex_iter))
+        {
+            if(text[i] == regex[regex_iter])
+            {
+                regex_iter++;
+            }
+            else
+            {
+                regex_iter = 0;
+                match_start = i + 1;
+            }
+        }
+        else if(is_wildcard(regex + regex_iter))
+        {
+            if(regex_iter == regex_len - 3 && is_seperator(text[i]))
+            {
+                regex_iter += 3;
+//                match_start--;
+                i--;
+                continue;
+            }
+            else if(text[i] != regex[regex_iter + 3])
+            {
+                if(is_seperator(text[i]))
+                {
+                        regex_iter = 0;
+                        match_start = i + 1;
+                }
+                if(i == strlen(text) - 1)
+                {
+                    if(regex_iter == regex_len - 3)
+                    {
+                        result[nmatch][0] = match_start + 1;
+                        result[nmatch][1] = i + 1;
+                        result[nmatch][2] = byword(text,match_start);
+                        nmatch++;
+                        regex_iter = 0;
+                    }
+                }
+                continue;
+            }
+            else if(text[i] == regex[regex_iter + 3])
+            {
+                regex_iter += 4;
+            }
+        }
+    }
+    result[0][0] = nmatch - 1;
+    return result;
+}
+
+void find(const char address[], const char pattern[], int flag, int at)
+{
+    int **result = regex(address, pattern);
+    int nmatch = result[0][0];
+    if(flag == COUNT)
+    {
+        printf("%d", nmatch);
+        return;
+    }
+    if(nmatch == 0)
+    {
+        printf("-1\n");
+        return;
+    }
+    switch (flag)
+    {
+        case ALL:
+        {
+            for(int i = 1; i <= result[0][0]; i++)
+            {
+                if(i != nmatch)
+                    printf("%d, ", result[i][0]);
+                else
+                    printf("%d", result[i][0]);
+            }
+            printf("\n");
+            break;
+        }
+        case ALL | BYWORD:
+        {
+            for(int i = 1; i <= result[0][0]; i++)
+            {
+                if(i != nmatch)
+                    printf("%d, ", result[i][2]);
+                else
+                    printf("%d", result[i][2]);
+            }
+            printf("\n");
+            break;
+        }
+        case AT:
+        {
+            if(nmatch < at)
+            {
+                printf("-1\n");
+                return;
+            }
+            printf("%d\n", result[at][0]);
+            break;
+        }
+        case AT | BYWORD:
+        {
+            if(nmatch < at)
+            {
+                printf("-1\n");
+                return;
+            }
+            printf("%d\n", result[at][2]);
+            break;
+        }
+        default:
+        {
+            printf("Error: Invalid flags for find function.\n");
+            return;
+        }
+
+    }
+
+}
+
 //int main()
 //{
-//    char address[SIZE] = "/root/dir1/temp/file1.txt";
-//    create_file(address);
-//    insert_str(address, "salam\nkhobi?", 1, 0);
-//    remove_str(address, 1, 0, 15, 'f');
-//    cut_str(address, 1, 0, 20, 'f');
-//    paste(address, 1, 0);
-//    cat(address);
-//
+////    char address[SIZE] = "/root/file1.txt";
+////    create_file(address);
+//////    remove_str(address, 1, 0, 500, 'f');
+//////    insert_str(address, "RegExr was created by gskinner.com.\nEdit the Expression & Text to see matches. Roll over matches or the expression for details. PCRE & JavaScript flavors of RegEx are supported. Validate your expression with Tests mode.", 1, 0);
+//////    cut_str(address, 1, 0, 20, 'f');
+//////    paste(address, 1, 0);
+//////    cat(address);
+//////    regex_compiler("sdaf\\*\\a*\\");
+////    find(address, "s*",ALL, 1);
 //}
