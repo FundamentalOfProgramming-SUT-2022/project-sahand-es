@@ -409,7 +409,7 @@ int **regex(const char address[], const char pattern[])
     char *name = (char*) address + 1;
     char c;
     char text[SIZE] = {'\0'};
-    int nmatch = 1, regex_iter = 0, regex_len = 0, match_start = -1;
+    int nmatch = 1, regex_iter = 0, regex_len = 0, match_start = 0;
     char regex[SIZE + 1] = {'\0'};
     strcpy(regex, regex_build(pattern));
     regex_len = strlen(regex);
@@ -426,6 +426,8 @@ int **regex(const char address[], const char pattern[])
     {
         strncat(text, &c, 1);
     }
+
+    fclose(file_to_read);
 
     for(int i = 0;text[i] != '\0'; i++)
     {
@@ -456,7 +458,6 @@ int **regex(const char address[], const char pattern[])
             if(regex_iter == regex_len - 3 && is_seperator(text[i]))
             {
                 regex_iter += 3;
-//                match_start--;
                 i--;
                 continue;
             }
@@ -560,15 +561,100 @@ void find(const char address[], const char pattern[], int flag, int at)
 
 }
 
+void replace(const char address[], const char pattern[], const char replace[],int flag, int at)
+{
+    char *name = (char*) address + 1;
+    char c;
+    char text[SIZE] = {'\0'};
+    char final_string[SIZE] = {'\0'};
+    int **result = regex(address, pattern);
+    int res = 1, nmatch = result[0][0];
+    FILE *file_to_read = fopen(name, "r");
+
+    while((c = getc(file_to_read)) != EOF)
+    {
+        strncat(text, &c, 1);
+    }
+    fclose(file_to_read);
+
+    if(nmatch == 0)
+    {
+        printf("Nothing to replace.\n");
+        return;
+    }
+
+    switch (flag)
+    {
+        case ALL:
+        {
+                for(int j = 0; j < strlen(text); j++)
+                {
+                    if(res <= nmatch && j == result[res][0] - 1)
+                    {
+                        strcat(final_string, replace);
+                        j = result[res][1] - 1;
+                        res++;
+                    }
+                    else
+                    {
+                        strncat(final_string, &text[j], 1);
+                    }
+                }
+            break;
+        }
+        case AT:
+        {
+            if(nmatch < at)
+            {
+                printf("Error: \'AT\' index is bigger than occurrence of pattern.\n");
+                return;
+            }
+            for(int j = 0; j < strlen(text); j++)
+            {
+                if(j == result[at][0] - 1)
+                {
+                    strcat(final_string, replace);
+                    if(result[at][0] != result[at][1])
+                        j = result[at][1] - 1;
+                    else
+                        j++;
+                }
+                else
+                {
+                    strncat(final_string, &text[j], 1);
+                }
+            }
+            break;
+        }
+        case AT | ALL:
+        {
+            printf("Error: Invalid flags, don't use \'ALL\' & \'AT\' flags together.\n");
+            return;
+        }
+        default:
+        {
+            printf("Error: Invalid flags for replace function.\n");
+            return;
+        }
+    }
+    FILE *file_to_write = fopen(name, "w");
+
+    fprintf(file_to_write, "%s", final_string);
+
+    fclose(file_to_write);
+
+}
+
 //int main()
 //{
-////    char address[SIZE] = "/root/file1.txt";
-////    create_file(address);
-//////    remove_str(address, 1, 0, 500, 'f');
-//////    insert_str(address, "RegExr was created by gskinner.com.\nEdit the Expression & Text to see matches. Roll over matches or the expression for details. PCRE & JavaScript flavors of RegEx are supported. Validate your expression with Tests mode.", 1, 0);
-//////    cut_str(address, 1, 0, 20, 'f');
-//////    paste(address, 1, 0);
-//////    cat(address);
-//////    regex_compiler("sdaf\\*\\a*\\");
-////    find(address, "s*",ALL, 1);
+//    char address[SIZE] = "/root/file1.txt";
+//    create_file(address);
+////    remove_str(address, 1, 0, 500, 'f');
+////    insert_str(address, "RegExr was created by gskinner.com.\nEdit the Expression & Text to see matches. Roll over matches or the expression for details. PCRE & JavaScript flavors of RegEx are supported. Validate your expression with Tests mode.", 1, 0);
+////    cut_str(address, 1, 0, 20, 'f');
+////    paste(address, 1, 0);
+//    cat(address);
+////    regex_compiler("sdaf\\*\\a*\\");
+////    find( address, "*he*", ALL, 1);
+////    replace(address, "*he", "koon",ALL, 5);
 //}
