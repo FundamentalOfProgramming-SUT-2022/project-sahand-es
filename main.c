@@ -14,7 +14,61 @@
 
 enum find_type{COUNT = 1, AT = 1 << 1, BYWORD = 1 << 2, ALL = 1 << 3};
 
-int file_exists(const char address[])
+int charNumToLine(const char *text, int char_num)
+{
+    int line = 1;
+    for(int i = 0; text[i] != '\0' && i < char_num - 1; i++)
+    {
+        if(text[i] == '\n')
+        {
+            line++;
+        }
+    }
+    return line;
+}
+
+int lineToCharNum(const char *text, int line)
+{
+    int line_count = 1;
+    for(int i = 0; text[i] != '\0'; i++)
+    {
+        if(line_count == line)
+            return i + 1;
+        if(text[i] == '\n')
+        {
+            line_count++;
+        }
+    }
+    return 0;
+}
+
+int posTocCharNum(const char* text, int line, int position)
+{
+    int char_num = lineToCharNum(text, line);
+    return char_num + position;
+}
+
+int charNumToPos(const char* text, int char_num)
+{
+    int position = 0;
+    int line = charNumToLine(text, char_num);
+    int line_count = 1;
+    for(int i = 0; text[i] != '\0'; i++)
+    {
+        if(line_count == line)
+        {
+            return char_num - 1 - i;
+        }
+        if(text[i] == '\n')
+        {
+            line_count++;
+        }
+    }
+    return 0;
+
+}
+
+int fileExists(const char address[])
 {
     FILE *does_exist = fopen(address, "r");
     if(does_exist == NULL)
@@ -49,7 +103,7 @@ void create_file(char address[])
 
     strncpy(dirname, address + first_slash + 1, iterate - 1);
 
-    if(file_exists(dirname))
+    if(fileExists(dirname))
     {
         printf("file with this name exists.\n");
         return;
@@ -69,7 +123,7 @@ void insert_str(const char address[],const char string[], int line, int position
     char c, *name = (char*) address + 1;
     char final_string[SIZE] = {'\0'};
 
-    if(!file_exists(name))
+    if(!fileExists(name))
     {
         printf("file with this name does not exists.\n");
         return;
@@ -143,7 +197,7 @@ void insert_str(const char address[],const char string[], int line, int position
 void cat(const char address[])
 {
     char *name = (char*) address + 1, c;
-    if(!file_exists(name))
+    if(!fileExists(name))
     {
         printf("file with this name does not exists.\n");
         return;
@@ -155,6 +209,7 @@ void cat(const char address[])
     {
         printf("%c", c);
     }
+    printf("\n");
 }
 
 void remove_str(const char address[], int line, int position, int size, char b_f_flag)
@@ -162,7 +217,7 @@ void remove_str(const char address[], int line, int position, int size, char b_f
     line--;
     char final_string[SIZE] = {'\0'};
     char*name = (char*) address + 1, c;
-    if(!file_exists(name))
+    if(!fileExists(name))
     {
         printf("file with this name does not exists.\n");
         return;
@@ -245,7 +300,7 @@ void copy_str(const char address[], int line, int position, int size, char b_f_f
     char temp[SIZE] = {'\0'};
     char text[SIZE] = {'\0'}, *name = (char*) address + 1;
     int line_counter = 0, position_counter = 0;
-    if(!file_exists(name))
+    if(!fileExists(name))
     {
         printf("file with this name does not exists.\n");
         return;
@@ -334,6 +389,18 @@ void paste(const char address[], int line, int position)
     insert_str(address, text, line, position);
 }
 
+void _read_(const char* name, char *text)
+{
+    char c;
+    FILE *file_to_read = fopen(name, "r");
+
+    while((c = getc(file_to_read)) != EOF)
+    {
+        strncat(text, &c, 1);
+    }
+
+    fclose(file_to_read);
+}
 char* regex_build(const char* searchfor)
 {
     char* expression = calloc(SIZE, sizeof (char));
@@ -375,7 +442,7 @@ char* regex_build(const char* searchfor)
     return expression;
 }
 
-int is_wildcard(const char* expression)
+int isWildcard(const char* expression)
 {
     const char wildcard[5] = "\\w*";
     for(int i = 0; i < 3; i++)
@@ -386,7 +453,14 @@ int is_wildcard(const char* expression)
     return 1;
 }
 
-int byword(const char text[], int offset)
+int isSeperator(char c)
+{
+    if(c == ' ' || c == EOF || c == '\n' || c == '\0')
+        return 1;
+    return 0;
+}
+
+int byWord(const char text[], int offset)
 {
     int count = 0;
     for(int i = 0; i < offset; i++)
@@ -397,19 +471,12 @@ int byword(const char text[], int offset)
     return count + 1;
 }
 
-int is_seperator(char c)
-{
-    if(c == ' ' || c == EOF || c == '\n')
-        return 1;
-    return 0;
-}
-
 int **regex(const char address[], const char pattern[])
 {
     char *name = (char*) address + 1;
     char c;
     char text[SIZE] = {'\0'};
-    int nmatch = 1, regex_iter = 0, regex_len = 0, match_start = 0;
+    int nmatch = 1, regex_iter = 0, regex_len = 0, match_start = 0,flag = 1, i = 0;
     char regex[SIZE + 1] = {'\0'};
     strcpy(regex, regex_build(pattern));
     regex_len = strlen(regex);
@@ -417,76 +484,73 @@ int **regex(const char address[], const char pattern[])
     int **result = (int**) calloc(SIZE, sizeof(int*));
     for(int i = 0; i < SIZE; i++)
     {
-        *(result + i) = (int*) calloc(3, sizeof (int));
+        *(result + i) = (int*) calloc(5, sizeof (int));
     }
 
-    FILE *file_to_read = fopen(name, "r");
+    _read_(name, text);
 
-    while((c = getc(file_to_read)) != EOF)
+    do
     {
-        strncat(text, &c, 1);
-    }
-
-    fclose(file_to_read);
-
-    for(int i = 0;text[i] != '\0'; i++)
-    {
-
-        if(regex_iter == regex_len)
-        {
-           result[nmatch][0] = match_start + 1;
-            result[nmatch][1] = i;
-            result[nmatch][2] = byword(text,match_start);
-            nmatch++;
-            regex_iter = 0;
-            match_start = i;
-        }
-        if(!is_wildcard(regex + regex_iter))
-        {
-            if(text[i] == regex[regex_iter])
+            if(regex_iter == regex_len)
             {
-                regex_iter++;
-            }
-            else
-            {
+                result[nmatch][0] = match_start + 1;
+                result[nmatch][1] = i;
+                result[nmatch][2] = byWord(text, match_start);
+                result[nmatch][3] = charNumToLine(text, result[nmatch][0]);
+                result[nmatch][4] = charNumToPos(text, result[nmatch][0]);
+                nmatch++;
                 regex_iter = 0;
-                match_start = i + 1;
+                match_start = i;
             }
-        }
-        else if(is_wildcard(regex + regex_iter))
-        {
-            if(regex_iter == regex_len - 3 && is_seperator(text[i]))
+            if(!isWildcard(regex + regex_iter))
             {
-                regex_iter += 3;
-                i--;
-                continue;
-            }
-            else if(text[i] != regex[regex_iter + 3])
-            {
-                if(is_seperator(text[i]))
+                if(text[i] == regex[regex_iter])
                 {
+                    regex_iter++;
+                }
+                else
+                {
+                    regex_iter = 0;
+                    match_start = i + 1;
+                }
+            }
+            else if(isWildcard(regex + regex_iter))
+            {
+                if(regex_iter == regex_len - 3 && isSeperator(text[i]))
+                {
+                    regex_iter += 3;
+                    i--;
+                    continue;
+                }
+                else if(text[i] != regex[regex_iter + 3])
+                {
+                    if(isSeperator(text[i]))
+                    {
                         regex_iter = 0;
                         match_start = i + 1;
-                }
-                if(i == strlen(text) - 1)
-                {
-                    if(regex_iter == regex_len - 3)
-                    {
-                        result[nmatch][0] = match_start + 1;
-                        result[nmatch][1] = i + 1;
-                        result[nmatch][2] = byword(text,match_start);
-                        nmatch++;
-                        regex_iter = 0;
                     }
+                    continue;
                 }
-                continue;
+                else if(text[i] == regex[regex_iter + 3])
+                {
+                    for(int j = i; !isSeperator(text[j]); j++)
+                    {
+                        if(text[j + 1] == regex[regex_iter + 3])
+                        {
+                            flag = 0;
+                            break;
+                        }
+                    }
+                    if(!flag)
+                    {
+                        flag = 1;
+                        continue;
+                    }
+                    regex_iter += 4;
+                }
             }
-            else if(text[i] == regex[regex_iter + 3])
-            {
-                regex_iter += 4;
-            }
-        }
-    }
+    } while (text[i] != '\0' && ++i);
+
     result[0][0] = nmatch - 1;
     return result;
 }
@@ -569,13 +633,8 @@ void replace(const char address[], const char pattern[], const char replace[],in
     char final_string[SIZE] = {'\0'};
     int **result = regex(address, pattern);
     int res = 1, nmatch = result[0][0];
-    FILE *file_to_read = fopen(name, "r");
 
-    while((c = getc(file_to_read)) != EOF)
-    {
-        strncat(text, &c, 1);
-    }
-    fclose(file_to_read);
+    _read_(name, text);
 
     if(nmatch == 0)
     {
@@ -633,7 +692,7 @@ void replace(const char address[], const char pattern[], const char replace[],in
         }
         default:
         {
-            printf("Error: Invalid flags for replace function.\n");
+            printf("Error: Invalid flags for replace.\n");
             return;
         }
     }
@@ -642,19 +701,73 @@ void replace(const char address[], const char pattern[], const char replace[],in
     fprintf(file_to_write, "%s", final_string);
 
     fclose(file_to_write);
-
 }
 
-//int main()
-//{
-//    char address[SIZE] = "/root/file1.txt";
-//    create_file(address);
-////    remove_str(address, 1, 0, 500, 'f');
-////    insert_str(address, "RegExr was created by gskinner.com.\nEdit the Expression & Text to see matches. Roll over matches or the expression for details. PCRE & JavaScript flavors of RegEx are supported. Validate your expression with Tests mode.", 1, 0);
-////    cut_str(address, 1, 0, 20, 'f');
-////    paste(address, 1, 0);
-//    cat(address);
-////    regex_compiler("sdaf\\*\\a*\\");
-////    find( address, "*he*", ALL, 1);
-////    replace(address, "*he", "koon",ALL, 5);
-//}
+void grep(int files_count, const char **address, char pattern[], char l_c_flag)
+{
+    int **result = NULL, nmatch = 0, count = 0;
+    char *grep_string = (char*) calloc(SIZE * files_count, sizeof (char));
+    char *found_names = (char*) calloc(SIZE * files_count, sizeof (char));
+    for(int i = 0; i < files_count; i++)
+    {
+        char text[SIZE] = {'\0'};
+        char *name = (char*) address[i] + 1;
+        int last_line = 0;
+
+
+        _read_(name, text);
+
+        result = regex(address[i], pattern);
+        nmatch = result[0][0];
+
+        for(int ii = 1; ii <= nmatch; ii++)
+        {
+            if(result[ii][3] == last_line)
+            {
+                continue;
+            }
+            count++;
+            if(ii == 1)
+            {
+                strcat(found_names, name);
+                strcat(found_names, "\n");
+            }
+            strcat(grep_string, name);
+            strcat(grep_string, ": ");
+            for(int j = lineToCharNum(text,result[ii][3]) - 1; text[j] != '\n' && text[j] != '\0'; j++)
+            {
+                strncat(grep_string, &text[j], 1);
+            }
+            strcat(grep_string, "\n");
+            last_line = result[ii][3];
+        }
+    }
+
+    switch (l_c_flag)
+    {
+        case '\0':
+        {
+            printf("%s\n",grep_string);
+            break;
+        }
+        case 'l':
+        {
+            printf("%s\n",found_names);
+            break;
+        }
+        case 'c':
+        {
+            printf("%d\n", count);
+            break;
+        }
+        default:
+        {
+            printf("Error: Invalid flags for grep.\n");
+            break;
+        }
+    }
+
+    free(grep_string);
+    free(found_names);
+    free(result);
+}
