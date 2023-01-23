@@ -14,6 +14,57 @@
 
 enum find_type{COUNT = 1, AT = 1 << 1, BYWORD = 1 << 2, ALL = 1 << 3};
 
+void _read_(const char* name, char *text)
+{
+    char c;
+    FILE *file_to_read = fopen(name, "r");
+
+    while((c = getc(file_to_read)) != EOF)
+    {
+        strncat(text, &c, 1);
+    }
+
+    fclose(file_to_read);
+}
+
+void _hidden_read_(const char* name, char *text)
+{
+    SetFileAttributesA(name, 32);
+
+    char c;
+    FILE *file_to_read = fopen(name, "r");
+
+    while((c = getc(file_to_read)) != EOF)
+    {
+        strncat(text, &c, 1);
+    }
+
+    fclose(file_to_read);
+
+    SetFileAttributesA(name, 32 + FILE_ATTRIBUTE_HIDDEN);
+}
+
+void _write_(const char* name, char *text)
+{
+
+    FILE *file_to_write = fopen(name, "w");
+
+    fprintf(file_to_write, "%s", text);
+
+    fclose(file_to_write);
+}
+
+void _hidden_write_(const char* name, char *text)
+{
+    SetFileAttributesA(name, 32);
+
+    FILE *file_to_write = fopen(name, "w");
+    fprintf(file_to_write, "%s", text);
+    fclose(file_to_write);
+
+    SetFileAttributesA(name, 32 + FILE_ATTRIBUTE_HIDDEN);
+}
+
 int charNumToLine(const char *text, int char_num)
 {
     int line = 1;
@@ -80,10 +131,42 @@ int fileExists(const char address[])
     return 1;
 }
 
+char* hiddenFileName(const char address[])
+{
+    char* hidden_name = (char*) calloc(SIZE, sizeof (char));
+    int last_slash = 0;
+
+    for(int i = 0; address[i] != '\0'; i++)
+    {
+        if(address[i] == '/')
+        {
+            last_slash = i;
+        }
+    }
+
+    strncpy(hidden_name, address + 1, last_slash);
+    strcat(hidden_name, ".");
+    strcat(hidden_name,address + 1 + last_slash);
+
+    return hidden_name;
+}
+
+void copyToHiddenFile(const char* address)
+{
+    char *text = (char*) calloc(SIZE, sizeof (char));
+
+    _read_(address + 1, text);
+    _hidden_write_(hiddenFileName(address), text);
+
+    free(text);
+
+}
+
 void create_file(char address[])
 {
     char dirname[SIZE] = {'\0'};
     int first_slash = 0;
+    int last_slash = 0;
     int iterate = 1;
 
     while (address[iterate] != '\0')
@@ -96,6 +179,7 @@ void create_file(char address[])
         {
             break;
         }
+        last_slash = iterate;
         strncpy(dirname, address + first_slash + 1, iterate - 1);
         mkdir(dirname);
         iterate++;
@@ -112,6 +196,19 @@ void create_file(char address[])
     {
         FILE  *new_file = fopen(dirname, "a+");
         fclose(new_file);
+
+        for(int i = 0; i < iterate; i++)
+        {
+            dirname[i]  = '\0';
+        }
+
+        char* hidden_name = hiddenFileName(address);
+
+        new_file = fopen(hidden_name, "a+");
+        DWORD attributes = GetFileAttributes(hidden_name);
+        SetFileAttributesA(hidden_name, attributes + FILE_ATTRIBUTE_HIDDEN);
+        fclose(new_file);
+        free(hidden_name);
     }
 
 }
@@ -120,7 +217,7 @@ void insert_str(const char address[],const char string[], int line, int position
 {
     line--;
     int count = strlen(string), i = 0, j = 0, place = 0;
-    char c, *name = (char*) address + 1;
+    char c, *name = (char*) address + 1, *text;
     char final_string[SIZE] = {'\0'};
 
     if(!fileExists(name))
@@ -185,6 +282,8 @@ void insert_str(const char address[],const char string[], int line, int position
     }
     if(flag)
         strcat(final_string, string);
+
+    copyToHiddenFile(address);
 
     FILE *file_to_write = fopen(name, "w");
 
@@ -283,6 +382,8 @@ void remove_str(const char address[], int line, int position, int size, char b_f
         }
         strncat(final_string, &c, 1);
     }
+
+    copyToHiddenFile(address);
 
     FILE *file_to_write = fopen(name, "w");
 
@@ -389,18 +490,6 @@ void paste(const char address[], int line, int position)
     insert_str(address, text, line, position);
 }
 
-void _read_(const char* name, char *text)
-{
-    char c;
-    FILE *file_to_read = fopen(name, "r");
-
-    while((c = getc(file_to_read)) != EOF)
-    {
-        strncat(text, &c, 1);
-    }
-
-    fclose(file_to_read);
-}
 char* regex_build(const char* searchfor)
 {
     char* expression = calloc(SIZE, sizeof (char));
@@ -562,11 +651,13 @@ void find(const char address[], const char pattern[], int flag, int at)
     if(flag == COUNT)
     {
         printf("%d", nmatch);
+        free(result);
         return;
     }
     if(nmatch == 0)
     {
         printf("-1\n");
+        free(result);
         return;
     }
     switch (flag)
@@ -600,6 +691,7 @@ void find(const char address[], const char pattern[], int flag, int at)
             if(nmatch < at)
             {
                 printf("-1\n");
+                free(result);
                 return;
             }
             printf("%d\n", result[at][0]);
@@ -610,6 +702,7 @@ void find(const char address[], const char pattern[], int flag, int at)
             if(nmatch < at)
             {
                 printf("-1\n");
+                free(result);
                 return;
             }
             printf("%d\n", result[at][2]);
@@ -618,6 +711,7 @@ void find(const char address[], const char pattern[], int flag, int at)
         default:
         {
             printf("Error: Invalid flags for find function.\n");
+            free(result);
             return;
         }
 
@@ -639,6 +733,7 @@ void replace(const char address[], const char pattern[], const char replace[],in
     if(nmatch == 0)
     {
         printf("Nothing to replace.\n");
+        free(result);
         return;
     }
 
@@ -666,6 +761,7 @@ void replace(const char address[], const char pattern[], const char replace[],in
             if(nmatch < at)
             {
                 printf("Error: \'AT\' index is bigger than occurrence of pattern.\n");
+                free(result);
                 return;
             }
             for(int j = 0; j < strlen(text); j++)
@@ -688,11 +784,13 @@ void replace(const char address[], const char pattern[], const char replace[],in
         case AT | ALL:
         {
             printf("Error: Invalid flags, don't use \'ALL\' & \'AT\' flags together.\n");
+            free(result);
             return;
         }
         default:
         {
             printf("Error: Invalid flags for replace.\n");
+            free(result);
             return;
         }
     }
@@ -771,3 +869,13 @@ void grep(int files_count, const char **address, char pattern[], char l_c_flag)
     free(found_names);
     free(result);
 }
+
+void undo(const char* address)
+{
+    char *text = (char*) calloc(SIZE, sizeof (char));
+    _hidden_read_(hiddenFileName(address), text);
+    copyToHiddenFile(address);
+    _write_(address + 1, text);
+    free(text);
+}
+
