@@ -794,6 +794,9 @@ void replace(const char address[], const char pattern[], const char replace[],in
             return;
         }
     }
+
+    copyToHiddenFile(address);
+
     FILE *file_to_write = fopen(name, "w");
 
     fprintf(file_to_write, "%s", final_string);
@@ -878,4 +881,106 @@ void undo(const char* address)
     _write_(address + 1, text);
     free(text);
 }
+
+void closing_pairs(const char* address)
+{
+    int open_count = 0, open_flag = 0, close_flag = 0;
+    char *text = (char*) calloc(SIZE, sizeof (char));
+    char *final_string = (char*) calloc(SIZE, sizeof (char));
+    _read_(address + 1,text);
+    int i , j;
+
+    for(j = 0; isSeperator(text[j]); j++)
+    {
+        strcat(final_string, " ");
+        open_count++;
+    }
+
+    for(i = j; text[i] != '\0'; i++)
+    {
+        if (text[i] != '{' && text[i] != '}')
+        {
+
+            if(open_flag && isSeperator(text[i]))
+            {
+                continue;
+            }
+            if(open_flag)
+            {
+                strcat(final_string, "\n");
+                for(int k = 0; k < open_count; k++)
+                {
+                    strcat(final_string, " ");
+                }
+            }
+            else if(!isSeperator(text[i]))
+            {
+                open_flag = 0;
+            }
+            if(text[i] == ' ')
+            {
+                int k = i;
+                while(text[k] != '{' && isSeperator(text[k]))
+                {
+                    k++;
+                }
+                if(text[k] == '{')
+                {
+                    strcat(final_string, " ");
+                    i = k - 1;
+                    continue;
+                }
+            }
+
+            strncat(final_string, &text[i], 1);
+            if(text[i+1] == '{')
+            {
+                strcat(final_string, " ");
+            }
+            open_flag = 0;
+            close_flag = 0;
+        }
+        else if (text[i] == '{')
+        {
+            char correction[SIZE] = {'\0'};
+            if(open_flag || close_flag)
+            {
+                correction[0] = '\n';
+                for (int jj = 1; jj < open_count + 1; jj++)
+                {
+                    correction[jj] = ' ';
+                }
+            }
+
+            strcat(correction, "{\0");
+            strcat(final_string, correction);
+            open_count += 4;
+            open_flag = 1;
+            close_flag = 0;
+        }
+        else if (text[i] == '}')
+        {
+            open_count -= 4;
+            char correction[SIZE] = {'\0'};
+            correction[0] = '\n';
+            for(int k = 1; k < open_count + 1; k++)
+            {
+                correction[k] = ' ';
+            }
+            strcat(final_string, correction);
+            strcat(final_string, "}");
+            open_flag = 0;
+            close_flag = 1;
+        }
+    }
+
+    printf("%s", final_string);
+
+
+    free(text);
+    free(final_string);
+}
+
+
+
 
