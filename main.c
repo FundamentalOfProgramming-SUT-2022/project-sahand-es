@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <direct.h>
 #include <windows.h>
+#include <dirent.h>
 
 
 #define SIZE 1000
@@ -1130,5 +1131,51 @@ void text_comparator(const char* address1, const char* address2)
 
     free(text2);
     free(text1);
+}
+void tree(int depth, int first_depth)
+{
+    struct dirent *entry;
+    struct stat filestat;
+    if(depth == 0)
+        return;
+
+    DIR *folder;
+    folder = opendir(".");
+    if(folder == NULL)
+    {
+        perror("Unable to read directory");
+        return;
+    }
+
+    while( (entry=readdir(folder)) )
+    {
+        char arrow[SIZE] = {'\0'};
+        if(first_depth  - depth > 0 && depth)
+        {
+            for(int i = 0; i < first_depth - depth - 1; i++)
+            {
+                strcat(arrow, "     ");
+            }
+                strcat(arrow, "|--->");
+        }
+        stat(entry->d_name,&filestat);
+        if( S_ISDIR(filestat.st_mode) )
+        {
+            if(entry->d_name[0] != '.')
+            {
+                printf("%s", arrow);
+                printf("%s:\n",entry->d_name);
+                chdir(entry->d_name);
+                tree(depth - 1, first_depth);
+                chdir("..");
+            }
+        }
+        else if(entry->d_name[0] != '.')
+        {
+            printf("%s", arrow);
+            printf("%s\n",entry->d_name);
+        }
+    }
+    closedir(folder);
 }
 
