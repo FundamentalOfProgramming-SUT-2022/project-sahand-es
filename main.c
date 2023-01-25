@@ -981,6 +981,154 @@ void closing_pairs(const char* address)
     free(final_string);
 }
 
+int oneDiffrencePrint(const char* text1_line, const char* text2_line, int line)
+{
+    char words1[SIZE][SIZE] = {'\0'};
+    char words2[SIZE][SIZE] = {'\0'};
+    int start = 0;
+    int c1 = 0, c2 = 0, diff = 0, diff_count = 0;
+    for(int i = 0; text1_line[i] != '\0'; i++)
+    {
+        if(byWord(text1_line,i) != byWord(text1_line, start))
+        {
+            strncpy(words1[c1], text1_line + start, i - start - 1);
+            c1++;
+            start = i;
+        }
+        else if(byWord(text1_line,i) == byWord(text1_line ,strlen(text1_line) - 1))
+        {
+            strncpy(words1[c1], text1_line + start, strlen(text1_line) - start);
+            c1++;
+            start = i;
+            break;
+        }
+    }
+    start = 0;
+    for(int i = 0; text2_line[i] != '\0'; i++)
+    {
+        if(byWord(text2_line,i) != byWord(text2_line, start))
+        {
+            strncpy(words2[c2], text2_line + start, i - start - 1);
+            c2++;
+            start = i;
+        }
+        else if(byWord(text2_line,i) == byWord(text2_line ,strlen(text2_line) - 1))
+        {
+            strncpy(words2[c2], text2_line + start, strlen(text2_line) - start);
+            c2++;
+            start = i;
+            break;
+        }
+    }
+    if(c1 != c2)
+        return 0;
 
+    for(int i = 0; i < c1; i++)
+    {
+        if(diff_count > 1)
+        {
+            return 0;
+        }
+        if(strcmp(words1[i], words2[i]) != 0)
+        {
+            diff = i;
+            diff_count++;
+        }
+    }
+    printf("============ #%d ============\n", line);
+    for(int i = 0; i < c1; i++)
+    {
+        if(i != diff)
+            printf("%s ", words1[i]);
+        else
+        {
+            printf(">>%s<< ", words1[i]);
+        }
+    }
+    printf("\n");
+    for(int i = 0; i < c1; i++)
+    {
+        if(i != diff)
+            printf("%s ", words2[i]);
+        else
+        {
+            printf(">>%s<< ", words2[i]);
+        }
+    }
+    printf("\n");
+    return 1;
+}
 
+void text_comparator(const char* address1, const char* address2)
+{
+    char *text1 = (char*) calloc(SIZE, sizeof (char));
+    char *text2 = (char*) calloc(SIZE, sizeof (char));
+    int line_counter1 = 0, line_counter2 = 0, flag1 = 1, flag2 = 1, line_start1 = 0, line_start2 = 0;
+    _read_(address1 + 1, text1);
+    _read_(address2 + 1, text2);
+    while(flag1 || flag2)
+    {
+        char text1_line[SIZE] = {'\0'};
+        char text2_line[SIZE] = {'\0'};
+        for(int i = line_start1; text1[i] != '\0'; i++)
+        {
+            if(text1[i] == '\n')
+            {
+                strncpy(text1_line, text1 + line_start1, i - line_start1);
+                line_start1 = i + 1;
+                line_counter1++;
+                if(text1[i+1] == '\0')
+                    flag1 = 0;
+                break;
+            }
+            if(text1[i+1] == '\0')
+            {
+                flag1 = 0;
+                strncpy(text1_line, text1 + line_start1, i + 1 - line_start1);
+                line_start1 = i + 1;
+                line_counter1++;
+            }
+        }
+        for(int i = line_start2; text2[i] != '\0'; i++)
+        {
+            if(text2[i] == '\n')
+            {
+                strncpy(text2_line, text2 + line_start2, i - line_start2);
+                line_start2 = i + 1;
+                line_counter2++;
+                if(text2[i+1] == '\0')
+                    flag2 = 0;
+                break;
+            }
+            if(text2[i+1] == '\0')
+            {
+                flag2 = 0;
+                strncpy(text2_line, text2 + line_start2, i + 1 - line_start2);
+                line_start2 = i;
+                line_counter2++;
+            }
+        }
+        if(strcmp(text1_line, text2_line) != 0)
+        {
+            if(!strcmp(text1_line, "\0"))
+            {
+                printf("<<<<<<<<<<<<< #%d - #%d >>>>>>>>>>>>>\n", line_counter2, line_counter1 + 1);
+                printf("%s\n", text2_line);
+            }
+            else if(!strcmp(text2_line, "\0"))
+            {
+                printf("<<<<<<<<<<<<< #%d - #%d >>>>>>>>>>>>>\n", line_counter1, line_counter2 + 1);
+                printf("%s\n", text1_line);
+            }
+            else if(!oneDiffrencePrint(text1_line, text2_line,line_counter1))
+            {
+                printf("============ #%d ============\n", line_counter1);
+                printf("%s\n%s\n",text1_line, text2_line);
+            }
+        }
+    }
+
+    free(text2);
+    free(text1);
+}
 
