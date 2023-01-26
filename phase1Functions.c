@@ -13,7 +13,17 @@
 
 #define SIZE 1000
 
-enum find_type{COUNT = 1, AT = 1 << 1, BYWORD = 1 << 2, ALL = 1 << 3};
+enum FIND_TYPES {COUNT = 1, AT = 1 << 1, BYWORD = 1 << 2, ALL = 1 << 3};
+
+void errorOutput(char *ERORR)
+{
+    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+
+    SetConsoleTextAttribute(hConsole, FOREGROUND_RED);
+    printf("%s", ERORR);
+    SetConsoleTextAttribute(hConsole, 7);
+
+}
 
 void _read_(const char* name, char *text)
 {
@@ -190,7 +200,7 @@ void create_file(char address[])
 
     if(fileExists(dirname))
     {
-        printf("file with this name exists.\n");
+        errorOutput("ERROR: file with this name exists.\n");
         return;
     }
     else
@@ -223,7 +233,7 @@ void insert_str(const char address[],const char string[], int line, int position
 
     if(!fileExists(name))
     {
-        printf("file with this name does not exists.\n");
+        errorOutput("ERORR: file with this name does not exists.\n");
         return;
     }
 
@@ -294,22 +304,30 @@ void insert_str(const char address[],const char string[], int line, int position
     fclose(file_to_read);
 }
 
-void cat(const char address[])
+void cat(const char address[], char *arman)
 {
     char *name = (char*) address + 1, c;
     if(!fileExists(name))
     {
-        printf("file with this name does not exists.\n");
+        errorOutput("ERROR: File with this name does not exists.\n");
         return;
     }
 
     FILE *file_to_read = fopen(name, "r");
 
-    while ((c = fgetc(file_to_read)) != EOF)
+    if(arman == NULL)
     {
-        printf("%c", c);
+        while ((c = fgetc(file_to_read)) != EOF)
+        {
+            printf("%c", c);
+        }
+        printf("\n");
     }
-    printf("\n");
+    else
+    {
+        _read_(address + 1, arman);
+        strcat(arman, "\n");
+    }
 }
 
 void remove_str(const char address[], int line, int position, int size, char b_f_flag)
@@ -319,7 +337,7 @@ void remove_str(const char address[], int line, int position, int size, char b_f
     char*name = (char*) address + 1, c;
     if(!fileExists(name))
     {
-        printf("file with this name does not exists.\n");
+        errorOutput("ERROR: File with this name does not exists.\n");
         return;
     }
     int line_counter = 0, position_counter = 0, iter = 0, flag = 0;
@@ -338,7 +356,7 @@ void remove_str(const char address[], int line, int position, int size, char b_f
                 }
                 if(c == EOF)
                 {
-                    printf("ERORR: Empty line.\n");
+                    errorOutput("ERORR: Empty line.\n");
                     return;
                 }
             }
@@ -404,7 +422,7 @@ void copy_str(const char address[], int line, int position, int size, char b_f_f
     int line_counter = 0, position_counter = 0;
     if(!fileExists(name))
     {
-        printf("file with this name does not exists.\n");
+        errorOutput("ERROR: File with this name does not exists.\n");
         return;
     }
 
@@ -420,7 +438,7 @@ void copy_str(const char address[], int line, int position, int size, char b_f_f
         }
         if(c == EOF)
         {
-            printf("ERORR: Empty line.\n");
+            errorOutput("ERORR: Empty line.\n");
             return;
         }
     }
@@ -645,7 +663,7 @@ int **regex(const char address[], const char pattern[])
     return result;
 }
 
-void find(const char address[], const char pattern[], int flag, int at)
+void find(const char address[], const char pattern[], int flag, int at, char *arman)
 {
     int **result = regex(address, pattern);
     int nmatch = result[0][0];
@@ -657,9 +675,18 @@ void find(const char address[], const char pattern[], int flag, int at)
     }
     if(nmatch == 0)
     {
-        printf("-1\n");
-        free(result);
-        return;
+        if(arman == NULL)
+        {
+            printf("-1\n");
+            free(result);
+            return;
+        }
+        else
+        {
+            sprintf(arman,"-1\n");
+            free(result);
+            return;
+        }
     }
     switch (flag)
     {
@@ -667,51 +694,101 @@ void find(const char address[], const char pattern[], int flag, int at)
         {
             for(int i = 1; i <= result[0][0]; i++)
             {
-                if(i != nmatch)
-                    printf("%d, ", result[i][0]);
+                if (arman == NULL)
+                {
+                    if(i != nmatch)
+                        printf("%d, ", result[i][0]);
+                    else
+                        printf("%d", result[i][0]);
+                }
                 else
-                    printf("%d", result[i][0]);
+                {
+                    if(i != nmatch)
+                        sprintf(arman + strlen(arman),"%d, ", result[i][0]);
+                    else
+                        sprintf(arman + strlen(arman),"%d", result[i][0]);
+                }
             }
-            printf("\n");
+            if(arman == NULL)
+                printf("\n");
+            else
+                sprintf(arman,"\n");
             break;
         }
         case ALL | BYWORD:
         {
             for(int i = 1; i <= result[0][0]; i++)
             {
-                if(i != nmatch)
-                    printf("%d, ", result[i][2]);
+                if (arman == NULL)
+                {
+                    if(i != nmatch)
+                        printf("%d, ", result[i][2]);
+                    else
+                        printf("%d", result[i][2]);
+                }
                 else
-                    printf("%d", result[i][2]);
+                {
+                    if(i != nmatch)
+                        sprintf(arman + strlen(arman),"%d, ", result[i][2]);
+                    else
+                        sprintf(arman + strlen(arman),"%d", result[i][2]);
+                }
             }
-            printf("\n");
+            if(arman == NULL)
+                printf("\n");
+            else
+                sprintf(arman,"\n");
             break;
         }
         case AT:
         {
             if(nmatch < at)
             {
-                printf("-1\n");
-                free(result);
-                return;
+                if(arman == NULL)
+                {
+                    printf("-1\n");
+                    free(result);
+                    return;
+                }
+                else
+                {
+                    sprintf(arman,"-1\n");
+                    free(result);
+                    return;
+                }
             }
-            printf("%d\n", result[at][0]);
+            if(arman == NULL)
+                printf("%d\n", result[at][0]);
+            else
+                sprintf(arman,"%d\n", result[at][0]);
             break;
         }
         case AT | BYWORD:
         {
             if(nmatch < at)
             {
-                printf("-1\n");
-                free(result);
-                return;
+                if(arman == NULL)
+                {
+                    printf("-1\n");
+                    free(result);
+                    return;
+                }
+                else
+                {
+                    sprintf(arman,"-1\n");
+                    free(result);
+                    return;
+                }
             }
-            printf("%d\n", result[at][2]);
+            if(arman == NULL)
+                printf("%d\n", result[at][2]);
+            else
+                sprintf(arman,"%d\n", result[at][2]);
             break;
         }
         default:
         {
-            printf("Error: Invalid flags for find function.\n");
+            errorOutput("ERROR: Invalid flags for find function.\n");
             free(result);
             return;
         }
@@ -761,7 +838,7 @@ void replace(const char address[], const char pattern[], const char replace[],in
         {
             if(nmatch < at)
             {
-                printf("Error: \'AT\' index is bigger than occurrence of pattern.\n");
+                errorOutput("ERROR: \'AT\' index is bigger than occurrence of pattern.\n");
                 free(result);
                 return;
             }
@@ -784,13 +861,13 @@ void replace(const char address[], const char pattern[], const char replace[],in
         }
         case AT | ALL:
         {
-            printf("Error: Invalid flags, don't use \'ALL\' & \'AT\' flags together.\n");
+            errorOutput("ERROR: Invalid flags, don't use \'ALL\' & \'AT\' flags together.\n");
             free(result);
             return;
         }
         default:
         {
-            printf("Error: Invalid flags for replace.\n");
+            errorOutput("ERROR: Invalid flags for replace.\n");
             free(result);
             return;
         }
@@ -805,7 +882,7 @@ void replace(const char address[], const char pattern[], const char replace[],in
     fclose(file_to_write);
 }
 
-void grep(int files_count, const char **address, char pattern[], char l_c_flag)
+void grep(int files_count, const char **address, char pattern[], char l_c_flag, char *arman)
 {
     int **result = NULL, nmatch = 0, count = 0;
     char *grep_string = (char*) calloc(SIZE * files_count, sizeof (char));
@@ -849,22 +926,46 @@ void grep(int files_count, const char **address, char pattern[], char l_c_flag)
     {
         case '\0':
         {
-            printf("%s\n",grep_string);
-            break;
+            if(arman == NULL)
+            {
+                printf("%s\n",grep_string);
+                break;
+            }
+            else
+            {
+                sprintf(arman,"%s\n",grep_string);
+                break;
+            }
         }
         case 'l':
         {
-            printf("%s\n",found_names);
-            break;
+            if(arman == NULL)
+            {
+                printf("%s\n", found_names);
+                break;
+            }
+            else
+            {
+                sprintf(arman, "%s\n", found_names);
+                break;
+            }
         }
         case 'c':
         {
-            printf("%d\n", count);
-            break;
+            if(arman == NULL)
+            {
+                printf("%d\n", count);
+                break;
+            }
+            else
+            {
+                sprintf(arman,"%d\n", count);
+                break;
+            }
         }
         default:
         {
-            printf("Error: Invalid flags for grep.\n");
+            errorOutput("ERROR: Invalid flags for grep.\n");
             break;
         }
     }
@@ -883,7 +984,7 @@ void undo(const char* address)
     free(text);
 }
 
-void closing_pairs(const char* address)
+void auto_indent(const char* address)
 {
     int open_count = 0, open_flag = 0, close_flag = 0;
     char *text = (char*) calloc(SIZE, sizeof (char));
@@ -982,7 +1083,7 @@ void closing_pairs(const char* address)
     free(final_string);
 }
 
-int oneDiffrencePrint(const char* text1_line, const char* text2_line, int line)
+int oneDiffrencePrint(const char* text1_line, const char* text2_line, int line, char *arman)
 {
     char words1[SIZE][SIZE] = {'\0'};
     char words2[SIZE][SIZE] = {'\0'};
@@ -1039,28 +1140,59 @@ int oneDiffrencePrint(const char* text1_line, const char* text2_line, int line)
     printf("============ #%d ============\n", line);
     for(int i = 0; i < c1; i++)
     {
-        if(i != diff)
-            printf("%s ", words1[i]);
+        if(arman == NULL)
+        {
+            if(i != diff)
+                printf("%s ", words1[i]);
+            else
+            {
+                printf(">>%s<< ", words1[i]);
+            }
+        }
         else
         {
-            printf(">>%s<< ", words1[i]);
+            if(i != diff)
+                sprintf(arman + strlen(arman),"%s ", words1[i]);
+            else
+            {
+                sprintf(arman + strlen(arman),">>%s<< ", words1[i]);
+            }
         }
     }
-    printf("\n");
+    if(arman == NULL)
+        printf("\n");
+    else
+        sprintf(arman + strlen(arman),"\n");
+
     for(int i = 0; i < c1; i++)
     {
-        if(i != diff)
-            printf("%s ", words2[i]);
+        if(arman == NULL)
+        {
+            if(i != diff)
+                printf("%s ", words2[i]);
+            else
+            {
+                printf(">>%s<< ", words2[i]);
+            }
+        }
         else
         {
-            printf(">>%s<< ", words2[i]);
+            if(i != diff)
+                sprintf(arman + strlen(arman),"%s ", words2[i]);
+            else
+            {
+                sprintf(arman + strlen(arman),">>%s<< ", words2[i]);
+            }
         }
     }
-    printf("\n");
+    if(arman == NULL)
+        printf("\n");
+    else
+        sprintf(arman + strlen(arman),"\n");
     return 1;
 }
 
-void text_comparator(const char* address1, const char* address2)
+void text_comparator(const char* address1, const char* address2, char *arman)
 {
     char *text1 = (char*) calloc(SIZE, sizeof (char));
     char *text2 = (char*) calloc(SIZE, sizeof (char));
@@ -1113,18 +1245,42 @@ void text_comparator(const char* address1, const char* address2)
         {
             if(!strcmp(text1_line, "\0"))
             {
-                printf("<<<<<<<<<<<<< #%d - #%d >>>>>>>>>>>>>\n", line_counter2, line_counter1 + 1);
-                printf("%s\n", text2_line);
+                if(arman == NULL)
+                {
+                    printf("<<<<<<<<<<<<< #%d - #%d >>>>>>>>>>>>>\n", line_counter2, line_counter1 + 1);
+                    printf("%s\n", text2_line);
+                }
+                else
+                {
+                    sprintf(arman + strlen(arman),"<<<<<<<<<<<<< #%d - #%d >>>>>>>>>>>>>\n", line_counter2, line_counter1 + 1);
+                    sprintf(arman + strlen(arman),"%s\n", text2_line);
+                }
             }
             else if(!strcmp(text2_line, "\0"))
             {
-                printf("<<<<<<<<<<<<< #%d - #%d >>>>>>>>>>>>>\n", line_counter1, line_counter2 + 1);
-                printf("%s\n", text1_line);
+                if(arman == NULL)
+                {
+                    printf("<<<<<<<<<<<<< #%d - #%d >>>>>>>>>>>>>\n", line_counter1, line_counter2 + 1);
+                    printf("%s\n", text1_line);
+                }
+                else
+                {
+                    sprintf(arman + strlen(arman),"<<<<<<<<<<<<< #%d - #%d >>>>>>>>>>>>>\n", line_counter1, line_counter2 + 1);
+                    sprintf(arman + strlen(arman),"%s\n", text1_line);
+                }
             }
-            else if(!oneDiffrencePrint(text1_line, text2_line,line_counter1))
+            else if(!oneDiffrencePrint(text1_line, text2_line,line_counter1,arman))
             {
-                printf("============ #%d ============\n", line_counter1);
-                printf("%s\n%s\n",text1_line, text2_line);
+                if(arman == NULL)
+                {
+                    printf("============ #%d ============\n", line_counter1);
+                    printf("%s\n%s\n",text1_line, text2_line);
+                }
+                else
+                {
+                    sprintf(arman + strlen(arman),"============ #%d ============\n", line_counter1);
+                    sprintf(arman + strlen(arman),"%s\n%s\n",text1_line, text2_line);
+                }
             }
         }
     }
@@ -1132,7 +1288,7 @@ void text_comparator(const char* address1, const char* address2)
     free(text2);
     free(text1);
 }
-void tree(int depth, int first_depth)
+void tree(int depth, int first_depth, char *arman)
 {
     struct dirent *entry;
     struct stat filestat;
@@ -1143,7 +1299,7 @@ void tree(int depth, int first_depth)
     folder = opendir(".");
     if(folder == NULL)
     {
-        perror("Unable to read directory");
+        errorOutput("ERORR: Unable to read directory\n");
         return;
     }
 
@@ -1163,17 +1319,33 @@ void tree(int depth, int first_depth)
         {
             if(entry->d_name[0] != '.')
             {
-                printf("%s", arrow);
-                printf("%s:\n",entry->d_name);
+                if(arman == NULL)
+                {
+                    printf("%s", arrow);
+                    printf("%s:\n",entry->d_name);
+                }
+                else
+                {
+                    sprintf(arman,"%s", arrow);
+                    sprintf(arman,"%s:\n",entry->d_name);
+                }
                 chdir(entry->d_name);
-                tree(depth - 1, first_depth);
+                tree(depth - 1, first_depth,NULL);
                 chdir("..");
             }
         }
         else if(entry->d_name[0] != '.')
         {
-            printf("%s", arrow);
-            printf("%s\n",entry->d_name);
+            if(arman == NULL)
+            {
+                printf("%s", arrow);
+                printf("%s\n",entry->d_name);
+            }
+            else
+            {
+                sprintf(arman,"%s", arrow);
+                printf(arman,"%s\n",entry->d_name);
+            }
         }
     }
     closedir(folder);
