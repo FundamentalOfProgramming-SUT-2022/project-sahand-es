@@ -84,6 +84,64 @@ int whichFunction(const char* order)
         return -1;
 }
 
+char *grep_files_input()
+{
+    char* address = (char*) calloc(SIZE, sizeof(char));
+    char c;
+    scanf("%c", &c);
+    while(c == ' ')
+    {
+        scanf("%c", &c);
+    }
+
+    if(c == '/')
+    {
+        address[0] = '/';
+        scanf("%s", address + 1);
+    }
+    else if(c == '\n')
+    {
+        return NULL;
+    }
+    else if(c == '"')
+    {
+        int i = 0;
+        while(i <= SIZE)
+        {
+            c = getchar();
+            if(c == '"')
+            {
+                if(address[i - 1] != '\\')
+                {
+                    break;
+                }
+                else
+                {
+                    address[i - 1] = c;
+                }
+            }
+            else
+            {
+                address[i] = c;
+                i++;
+            }
+            if(i == SIZE)
+            {
+                errorOutput("ERORR: Input size limit exceeded.\n");
+                return NULL;
+            }
+        }
+        address[i] = '\0';
+    }
+    else
+    {
+        errorOutput("ERROR: Invalid file address\n");
+        return NULL;
+    }
+
+    return address;
+}
+
 char *file_input()
 {
     char* address = (char*) calloc(SIZE, sizeof(char));
@@ -120,7 +178,7 @@ char *file_input()
             }
             if(i == SIZE)
             {
-                perror("ERORR: Input size limit exceeded.\n");
+                errorOutput("ERORR: Input size limit exceeded.\n");
                 return NULL;
             }
         }
@@ -128,7 +186,7 @@ char *file_input()
     }
     else
     {
-        perror("ERROR: Invalid file address\n");
+        errorOutput("ERROR: Invalid file address\n");
         return NULL;
     }
 
@@ -144,8 +202,13 @@ char *string_input()
 
     if(c != '"')
     {
-        string[0] = c;
-        scanf("%s", string + 1);
+        int it = 0;
+        while(!(isSeperator(c)))
+        {
+            string[it] = c;
+            c = getchar();
+            it++;
+        }
     }
     else if(c == '"')
     {
@@ -200,13 +263,13 @@ char *string_input()
         }
         if(i == SIZE)
         {
-            perror("ERORR: Input size limit exceeded.\n");
+            errorOutput("ERORR: Input size limit exceeded.\n");
             return NULL;
         }
     }
     else
     {
-        perror("ERROR: Invalid string\n");
+        errorOutput("ERROR: Invalid string\n");
         return NULL;
     }
     return string;
@@ -228,7 +291,7 @@ int size_input()
     return x;
 }
 
-int flag_input()
+char b_f_flag_input()
 {
     char c;
     scanf(" -%c", &c);
@@ -236,10 +299,52 @@ int flag_input()
 
 }
 
+int* find_flags()
+{
+    int *flags = (int*) calloc(2, sizeof (int));
+    int flag = 0, space = 0, at = 0;
+    char at_string[SIZE] = {'\0'};
+    char* flag_string = (char*) calloc(SIZE, sizeof(char));
+    scanf(" %[^\n]s", flag_string);
+    for(int i = 0; flag_string[i] != '\0'; i++)
+    {
+        if(flag_string[i] == ' ' || flag_string[i+1] == '\0')
+        {
+            if(!strncmp(flag_string + space, "-all", 4))
+            {
+                flag |= ALL;
+            }
+            else if(!strncmp(flag_string + space, "-count", 6))
+            {
+                flag |= COUNT;
+            }
+            else if(!strncmp(flag_string + space, "-byword", 7))
+            {
+                flag |= BYWORD;
+            }
+            else if(!strncmp(flag_string + space, "-at", 3))
+            {
+                flag |= AT;
+                i++;
+                for(i + 1; flag_string[i] != ' ' && flag_string[i] != '\0'; i++)
+                {
+                    strncat(at_string, &flag_string[i], 1);
+                }
+                at = atoi(at_string);
+            }
+            space = i + 1;
+        }
+    }
+    flags[0] = flag;
+    flags[1] = at;
+    return flags;
+}
+
 void functioncaller()
 {
+    int *find_flags_arr;
     char *order = (char*) calloc(SIZE, sizeof(char));
-    char *address, *string, flag = '\0';
+    char *address, *string, flag = '\0', *string1;
     int *line_position, size = 0;
 
     scanf("%s", order);
@@ -270,7 +375,7 @@ void functioncaller()
             address = file_input();
             line_position = pos_input();
             size = size_input();
-            flag = flag_input();
+            flag = b_f_flag_input();
             remove_str(address, line_position[0], line_position[1], size, flag);
 
             break;
@@ -280,7 +385,7 @@ void functioncaller()
             address = file_input();
             line_position = pos_input();
             size = size_input();
-            flag = flag_input();
+            flag = b_f_flag_input();
             copy_str(address, line_position[0], line_position[1], size, flag);
 
             break;
@@ -290,7 +395,7 @@ void functioncaller()
             address = file_input();
             line_position = pos_input();
             size = size_input();
-            flag = flag_input();
+            flag = b_f_flag_input();
             cut_str(address, line_position[0], line_position[1], size, flag);
 
             break;
@@ -307,10 +412,100 @@ void functioncaller()
         {
             string = string_input();
             address = file_input();
+            find_flags_arr = find_flags();
+
+            find(address, string, find_flags_arr[0], find_flags_arr[1], NULL);
             break;
         }
+        case REPLACE:
+        {
+//            asdfaasdfasdfasdfadfasdfadfadsfadfasdfasdf
+            string = string_input();
+            string1 = string_input();
+            address = file_input();
+            find_flags_arr = find_flags();
+
+            replace_str(address, string, string1, find_flags_arr[0], find_flags_arr[1]);
+            break;
+        }
+        case GREP:
+        {
+            int files_count = 0;
+            scanf(" -%c ", &flag);
+            if(flag == ' ')
+                flag = '\0';
+            string = string_input();
+            scanf(" --files ");
+            char** files = (char **) calloc(SIZE, sizeof (char*));
+            for(int i = 0; i < SIZE; i++)
+            {
+                *(files + i) = (char *) calloc(SIZE, sizeof(char));
+            }
+            while(1)
+            {
+                files[files_count] = grep_files_input();
+                if(files[files_count] == NULL)
+                {
+                    break;
+                }
+                files_count++;
+//                getchar();
+            }
+            grep(files_count, files, string, flag, NULL);
+
+            free(files);
+            break;
+        }
+        case UNDO:
+        {
+            address = file_input();
+
+            undo(address);
+            break;
+        }
+        case AUTO_INDENT:
+        {
+            address = file_input();
+
+            auto_indent(address);
+            break;
+        }
+        case COMPARE:
+        {
+            string = file_input();
+            string1 = file_input();
+
+            text_comparator(string, string1, NULL);
+            break;
+        }
+        case TREE:
+        {
+            address = file_input();
+            chdir(address + 1);
+            int depth = 0;
+            scanf("%d", &depth);
+
+            tree(depth, depth, NULL);
+            break;
+        }
+        
     }
 
     free(order);
 }
 
+int main()
+{
+    functioncaller();
+}
+//createfile --file "/root/te xt.txt"
+//undo --file "/root/te xt.txt"
+//auto-indent --file "/root/te xt.txt"
+//compare --file "/root/te xt.txt" --file /root/hidden.txt
+//find --str po* --file /root/test1/text.txt -all -byword -at 3 -count
+//replace --str pos --str gooz --file /root/test1/text.txt -at 1
+//replace --str pos --str gooz --file "/root/te xt.txt" -at 1
+//space avval byword
+//pastestr --file "/root/te xt.txt" --pos 1:0
+//{{}    {}}
+//grep - --str astr --files "/root/te xt.txt" /root/hidden.txt

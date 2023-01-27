@@ -11,7 +11,7 @@
 #include <dirent.h>
 
 
-#define SIZE 1000
+#define SIZE 10000
 
 enum FIND_TYPES {COUNT = 1, AT = 1 << 1, BYWORD = 1 << 2, ALL = 1 << 3};
 
@@ -130,9 +130,9 @@ int charNumToPos(const char* text, int char_num)
 
 }
 
-int fileExists(const char address[])
+int fileExists(const char name[])
 {
-    FILE *does_exist = fopen(address, "r");
+    FILE *does_exist = fopen(name, "r");
     if(does_exist == NULL)
     {
         fclose(does_exist);
@@ -579,8 +579,13 @@ int byWord(const char text[], int offset)
     return count + 1;
 }
 
-int **regex(const char address[], const char pattern[])
+int **regex(const char* address, const char* pattern)
 {
+    if(!fileExists(address + 1))
+    {
+        errorOutput("ERROR: File with this name does not exists.\n");
+        return NULL;
+    }
     char *name = (char*) address + 1;
     char c;
     char text[SIZE] = {'\0'};
@@ -665,6 +670,11 @@ int **regex(const char address[], const char pattern[])
 
 void find(const char address[], const char pattern[], int flag, int at, char *arman)
 {
+    if(!fileExists(address + 1))
+    {
+        errorOutput("ERROR: File with this name does not exists.\n");
+        return;
+    }
     int **result = regex(address, pattern);
     int nmatch = result[0][0];
     if(flag == COUNT)
@@ -797,20 +807,28 @@ void find(const char address[], const char pattern[], int flag, int at, char *ar
 
 }
 
-void replace(const char address[], const char pattern[], const char replace[],int flag, int at)
+void replace_str(const char address[], const char pattern[], const char replace[], int flag, int at)
 {
+
     char *name = (char*) address + 1;
     char c;
     char text[SIZE] = {'\0'};
     char final_string[SIZE] = {'\0'};
-    int **result = regex(address, pattern);
+    int **result;
+    result = regex(address,pattern);
     int res = 1, nmatch = result[0][0];
+
+    if(!fileExists(name))
+    {
+        errorOutput("ERROR: File with this name does not exists.\n");
+        return;
+    }
 
     _read_(name, text);
 
     if(nmatch == 0)
     {
-        printf("Nothing to replace.\n");
+        printf("Nothing to replace_str.\n");
         free(result);
         return;
     }
@@ -867,7 +885,7 @@ void replace(const char address[], const char pattern[], const char replace[],in
         }
         default:
         {
-            errorOutput("ERROR: Invalid flags for replace.\n");
+            errorOutput("ERROR: Invalid flags for replace_str.\n");
             free(result);
             return;
         }
@@ -882,8 +900,22 @@ void replace(const char address[], const char pattern[], const char replace[],in
     fclose(file_to_write);
 }
 
+char *file_name(char* name)
+{
+    int last_slash = 0;
+    for(int i = 0; name[i] !='\0'; i++)
+    {
+        if(name[i] == '/')
+        {
+            last_slash = i;
+        }
+    }
+    return name + last_slash + 1;
+}
+
 void grep(int files_count, const char **address, char pattern[], char l_c_flag, char *arman)
 {
+
     int **result = NULL, nmatch = 0, count = 0;
     char *grep_string = (char*) calloc(SIZE * files_count, sizeof (char));
     char *found_names = (char*) calloc(SIZE * files_count, sizeof (char));
@@ -893,7 +925,11 @@ void grep(int files_count, const char **address, char pattern[], char l_c_flag, 
         char *name = (char*) address[i] + 1;
         int last_line = 0;
 
-
+        if(!fileExists(name))
+        {
+            errorOutput("ERROR: File with this name does not exists.\n");
+            return;
+        }
         _read_(name, text);
 
         result = regex(address[i], pattern);
@@ -908,10 +944,10 @@ void grep(int files_count, const char **address, char pattern[], char l_c_flag, 
             count++;
             if(ii == 1)
             {
-                strcat(found_names, name);
+                strcat(found_names, file_name(name));
                 strcat(found_names, "\n");
             }
-            strcat(grep_string, name);
+            strcat(grep_string, file_name(name));
             strcat(grep_string, ": ");
             for(int j = lineToCharNum(text,result[ii][3]) - 1; text[j] != '\n' && text[j] != '\0'; j++)
             {
@@ -986,6 +1022,11 @@ void undo(const char* address)
 
 void auto_indent(const char* address)
 {
+    if(!fileExists(address + 1))
+    {
+        errorOutput("ERROR: File with this name does not exists.\n");
+        return;
+    }
     int open_count = 0, open_flag = 0, close_flag = 0;
     char *text = (char*) calloc(SIZE, sizeof (char));
     char *final_string = (char*) calloc(SIZE, sizeof (char));
@@ -1076,7 +1117,7 @@ void auto_indent(const char* address)
         }
     }
 
-    printf("%s", final_string);
+    _write_(address + 1, final_string);
 
 
     free(text);
@@ -1085,8 +1126,13 @@ void auto_indent(const char* address)
 
 int oneDiffrencePrint(const char* text1_line, const char* text2_line, int line, char *arman)
 {
-    char words1[SIZE][SIZE] = {'\0'};
-    char words2[SIZE][SIZE] = {'\0'};
+    char** words1 = (char **) calloc(SIZE, sizeof (char*));
+    char** words2 = (char **) calloc(SIZE, sizeof (char*));
+    for(int i = 0; i < SIZE; i++)
+    {
+        *(words1 + i) = (char*) calloc(SIZE, sizeof (char));
+        *(words2 + i) = (char*) calloc(SIZE, sizeof (char));
+    }
     int start = 0;
     int c1 = 0, c2 = 0, diff = 0, diff_count = 0;
     for(int i = 0; text1_line[i] != '\0'; i++)
@@ -1129,6 +1175,8 @@ int oneDiffrencePrint(const char* text1_line, const char* text2_line, int line, 
     {
         if(diff_count > 1)
         {
+            free(words1);
+            free(words2);
             return 0;
         }
         if(strcmp(words1[i], words2[i]) != 0)
@@ -1189,11 +1237,23 @@ int oneDiffrencePrint(const char* text1_line, const char* text2_line, int line, 
         printf("\n");
     else
         sprintf(arman + strlen(arman),"\n");
+    free(words1);
+    free(words2);
     return 1;
 }
 
 void text_comparator(const char* address1, const char* address2, char *arman)
 {
+    if(!fileExists(address1 + 1))
+    {
+        errorOutput("ERROR: First file: file with this name does not exists.\n");
+        return;
+    }
+    if(!fileExists(address2 + 1))
+    {
+        errorOutput("ERROR: Second file: file with this name does not exists.\n");
+        return;
+    }
     char *text1 = (char*) calloc(SIZE, sizeof (char));
     char *text2 = (char*) calloc(SIZE, sizeof (char));
     int line_counter1 = 0, line_counter2 = 0, flag1 = 1, flag2 = 1, line_start1 = 0, line_start2 = 0;
@@ -1237,7 +1297,7 @@ void text_comparator(const char* address1, const char* address2, char *arman)
             {
                 flag2 = 0;
                 strncpy(text2_line, text2 + line_start2, i + 1 - line_start2);
-                line_start2 = i;
+                line_start2 = i + 1;
                 line_counter2++;
             }
         }
@@ -1269,7 +1329,7 @@ void text_comparator(const char* address1, const char* address2, char *arman)
                     sprintf(arman + strlen(arman),"%s\n", text1_line);
                 }
             }
-            else if(!oneDiffrencePrint(text1_line, text2_line,line_counter1,arman))
+            else if(!oneDiffrencePrint(text1_line, text2_line,line_counter1, NULL))
             {
                 if(arman == NULL)
                 {
