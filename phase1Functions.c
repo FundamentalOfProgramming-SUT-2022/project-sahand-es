@@ -11,7 +11,7 @@
 #include <dirent.h>
 
 
-#define SIZE 10000
+#define SIZE 999999
 
 enum FIND_TYPES {COUNT = 1, AT = 1 << 1, BYWORD = 1 << 2, ALL = 1 << 3};
 
@@ -679,8 +679,11 @@ void find(const char address[], const char pattern[], int flag, int at, char *ar
     int nmatch = result[0][0];
     if(flag == COUNT)
     {
-        printf("%d", nmatch);
-        free(result);
+        if(arman == NULL)
+            printf("%d\n", nmatch);
+        else
+            sprintf(arman + strlen(arman),"%d\n", nmatch);
+            free(result);
         return;
     }
     if(nmatch == 0)
@@ -693,7 +696,7 @@ void find(const char address[], const char pattern[], int flag, int at, char *ar
         }
         else
         {
-            sprintf(arman,"-1\n");
+            sprintf(arman + strlen(arman),"-1\n");
             free(result);
             return;
         }
@@ -722,7 +725,7 @@ void find(const char address[], const char pattern[], int flag, int at, char *ar
             if(arman == NULL)
                 printf("\n");
             else
-                sprintf(arman,"\n");
+                sprintf(arman + strlen(arman),"\n");
             break;
         }
         case ALL | BYWORD:
@@ -747,7 +750,7 @@ void find(const char address[], const char pattern[], int flag, int at, char *ar
             if(arman == NULL)
                 printf("\n");
             else
-                sprintf(arman,"\n");
+                sprintf(arman + strlen(arman),"\n");
             break;
         }
         case AT:
@@ -762,7 +765,7 @@ void find(const char address[], const char pattern[], int flag, int at, char *ar
                 }
                 else
                 {
-                    sprintf(arman,"-1\n");
+                    sprintf(arman + strlen(arman),"-1\n");
                     free(result);
                     return;
                 }
@@ -770,7 +773,7 @@ void find(const char address[], const char pattern[], int flag, int at, char *ar
             if(arman == NULL)
                 printf("%d\n", result[at][0]);
             else
-                sprintf(arman,"%d\n", result[at][0]);
+                sprintf(arman + strlen(arman),"%d\n", result[at][0]);
             break;
         }
         case AT | BYWORD:
@@ -785,7 +788,7 @@ void find(const char address[], const char pattern[], int flag, int at, char *ar
                 }
                 else
                 {
-                    sprintf(arman,"-1\n");
+                    sprintf(arman + strlen(arman),"-1\n");
                     free(result);
                     return;
                 }
@@ -793,7 +796,7 @@ void find(const char address[], const char pattern[], int flag, int at, char *ar
             if(arman == NULL)
                 printf("%d\n", result[at][2]);
             else
-                sprintf(arman,"%d\n", result[at][2]);
+                sprintf(arman + strlen(arman),"%d\n", result[at][2]);
             break;
         }
         default:
@@ -913,7 +916,7 @@ char *file_name(char* name)
     return name + last_slash + 1;
 }
 
-void grep(int files_count, const char **address, char pattern[], char l_c_flag, char *arman)
+void grep(int files_count, const char **address, char* pattern, char l_c_flag, char *arman)
 {
 
     int **result = NULL, nmatch = 0, count = 0;
@@ -921,7 +924,8 @@ void grep(int files_count, const char **address, char pattern[], char l_c_flag, 
     char *found_names = (char*) calloc(SIZE * files_count, sizeof (char));
     for(int i = 0; i < files_count; i++)
     {
-        char text[SIZE] = {'\0'};
+
+        char *text = (char*) calloc(SIZE * files_count, sizeof (char));
         char *name = (char*) address[i] + 1;
         int last_line = 0;
 
@@ -932,7 +936,7 @@ void grep(int files_count, const char **address, char pattern[], char l_c_flag, 
         }
         _read_(name, text);
 
-        result = regex(address[i], pattern);
+        result = regex(*(address+i), pattern);
         nmatch = result[0][0];
 
         for(int ii = 1; ii <= nmatch; ii++)
@@ -969,7 +973,7 @@ void grep(int files_count, const char **address, char pattern[], char l_c_flag, 
             }
             else
             {
-                sprintf(arman,"%s\n",grep_string);
+                sprintf(arman + strlen(arman),"%s\n",grep_string);
                 break;
             }
         }
@@ -982,7 +986,7 @@ void grep(int files_count, const char **address, char pattern[], char l_c_flag, 
             }
             else
             {
-                sprintf(arman, "%s\n", found_names);
+                sprintf(arman + strlen(arman), "%s\n", found_names);
                 break;
             }
         }
@@ -995,7 +999,7 @@ void grep(int files_count, const char **address, char pattern[], char l_c_flag, 
             }
             else
             {
-                sprintf(arman,"%d\n", count);
+                sprintf(arman + strlen(arman),"%d\n", count);
                 break;
             }
         }
@@ -1350,6 +1354,11 @@ void text_comparator(const char* address1, const char* address2, char *arman)
 }
 void tree(int depth, int first_depth, char *arman)
 {
+    if(first_depth < -1)
+    {
+        errorOutput("ERROR: Invalid depth for tree.\n");
+        return;
+    }
     struct dirent *entry;
     struct stat filestat;
     if(depth == 0)
@@ -1365,7 +1374,7 @@ void tree(int depth, int first_depth, char *arman)
 
     while( (entry=readdir(folder)) )
     {
-        char arrow[SIZE] = {'\0'};
+        char *arrow = (char*) calloc(SIZE, sizeof(char));
         if(first_depth  - depth > 0 && depth)
         {
             for(int i = 0; i < first_depth - depth - 1; i++)
@@ -1386,11 +1395,12 @@ void tree(int depth, int first_depth, char *arman)
                 }
                 else
                 {
-                    sprintf(arman,"%s", arrow);
-                    sprintf(arman,"%s:\n",entry->d_name);
+                    sprintf(arman + strlen(arman),"%s", arrow);
+                    sprintf(arman + strlen(arman),"%s:\n",entry->d_name);
                 }
                 chdir(entry->d_name);
-                tree(depth - 1, first_depth,NULL);
+
+                tree(depth - 1, first_depth,arman);
                 chdir("..");
             }
         }
@@ -1403,8 +1413,8 @@ void tree(int depth, int first_depth, char *arman)
             }
             else
             {
-                sprintf(arman,"%s", arrow);
-                printf(arman,"%s\n",entry->d_name);
+                sprintf(arman + strlen(arman),"%s", arrow);
+                sprintf(arman + strlen(arman),"%s\n",entry->d_name);
             }
         }
     }

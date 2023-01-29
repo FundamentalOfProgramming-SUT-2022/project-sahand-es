@@ -15,20 +15,21 @@ enum ORDERS
     AUTO_INDENT,
     COMPARE,
     TREE,
-    ARMAN
+    ARMAN,
+    EXIT
 };
 
 int whichFunction(const char* order)
 {
-    if(!strcmp(order, "createfile"))
+    if(!strcmp(order, "create"))
     {
         return CREATE;
     }
-    else if(!strcmp(order, "insertstr"))
+    else if(!strcmp(order, "insert"))
     {
         return INSERT;
     }
-    else if(!strcmp(order, "removestr"))
+    else if(!strcmp(order, "remove"))
     {
         return REMOVE;
     }
@@ -36,15 +37,15 @@ int whichFunction(const char* order)
     {
         return CAT;
     }
-    else if(!strcmp(order, "copystr"))
+    else if(!strcmp(order, "copy"))
     {
         return COPY;
     }
-    else if(!strcmp(order, "cutstr"))
+    else if(!strcmp(order, "cut"))
     {
         return CUT;
     }
-    else if(!strcmp(order, "pastestr"))
+    else if(!strcmp(order, "paste"))
     {
         return PASTE;
     }
@@ -79,6 +80,10 @@ int whichFunction(const char* order)
     else if(!strcmp(order, "=D"))
     {
         return ARMAN;
+    }
+    else if(!strcmp(order, "exit"))
+    {
+        return EXIT;
     }
     else
         return -1;
@@ -187,6 +192,10 @@ char *file_input()
     else
     {
         errorOutput("ERROR: Invalid file address\n");
+        while(c != '\n')
+        {
+            c = getchar();
+        }
         return NULL;
     }
 
@@ -306,6 +315,7 @@ int* find_flags()
     char at_string[SIZE] = {'\0'};
     char* flag_string = (char*) calloc(SIZE, sizeof(char));
     scanf(" %[^\n]s", flag_string);
+//    getchar();
     for(int i = 0; flag_string[i] != '\0'; i++)
     {
         if(flag_string[i] == ' ' || flag_string[i+1] == '\0')
@@ -340,25 +350,40 @@ int* find_flags()
     return flags;
 }
 
-void functioncaller()
+void functioncaller(char *arman)
 {
     int *find_flags_arr;
     char *order = (char*) calloc(SIZE, sizeof(char));
-    char *address, *string, flag = '\0', *string1;
+    char *address = NULL, *string = NULL, flag = '\0', *string1;
     int *line_position, size = 0;
+
+    if(arman != NULL)
+    {
+        if(*arman != '\0')
+        {
+            string = arman;
+            arman = NULL;
+        }
+    }
 
     scanf("%s", order);
     switch (whichFunction(order))
     {
         case CREATE:
         {
-            create_file(file_input());
+            address = file_input();
+            if(address == NULL)
+                break;
+            create_file(address);
             break;
         }
         case INSERT:
         {
             address = file_input();
-            string = string_input();
+            if(address == NULL)
+                break;
+            if(string == NULL)
+                string = string_input();
             line_position = pos_input();
             insert_str(address, string, line_position[0], line_position[1]);
 
@@ -366,13 +391,20 @@ void functioncaller()
         }
         case CAT:
         {
-            cat(file_input(),NULL);
+            address = file_input();
+            if(address == NULL)
+                break;
+
+            cat(address,arman);
 
             break;
         }
         case REMOVE:
         {
             address = file_input();
+            if(address == NULL)
+                break;
+
             line_position = pos_input();
             size = size_input();
             flag = b_f_flag_input();
@@ -383,6 +415,9 @@ void functioncaller()
         case COPY:
         {
             address = file_input();
+            if(address == NULL)
+                break;
+
             line_position = pos_input();
             size = size_input();
             flag = b_f_flag_input();
@@ -393,6 +428,9 @@ void functioncaller()
         case CUT:
         {
             address = file_input();
+            if(address == NULL)
+                break;
+
             line_position = pos_input();
             size = size_input();
             flag = b_f_flag_input();
@@ -403,6 +441,9 @@ void functioncaller()
         case PASTE:
         {
             address = file_input();
+            if(address == NULL)
+                break;
+
             line_position = pos_input();
             paste(address, line_position[0], line_position[1]);
 
@@ -410,19 +451,25 @@ void functioncaller()
         }
         case FIND:
         {
-            string = string_input();
+            if(string == NULL)
+                string = string_input();
             address = file_input();
+            if(address == NULL)
+                break;
+
             find_flags_arr = find_flags();
 
-            find(address, string, find_flags_arr[0], find_flags_arr[1], NULL);
+            find(address, string, find_flags_arr[0], find_flags_arr[1], arman);
             break;
         }
         case REPLACE:
         {
-//            asdfaasdfasdfasdfadfasdfadfadsfadfasdfasdf
             string = string_input();
             string1 = string_input();
             address = file_input();
+            if(address == NULL)
+                break;
+
             find_flags_arr = find_flags();
 
             replace_str(address, string, string1, find_flags_arr[0], find_flags_arr[1]);
@@ -434,10 +481,11 @@ void functioncaller()
             scanf(" -%c ", &flag);
             if(flag == ' ')
                 flag = '\0';
-            string = string_input();
+            if(string == NULL)
+                string = string_input();
             scanf(" --files ");
-            char** files = (char **) calloc(SIZE, sizeof (char*));
-            for(int i = 0; i < SIZE; i++)
+            char** files = (char **) calloc(100, sizeof (char*));
+            for(int i = 0; i < 100; i++)
             {
                 *(files + i) = (char *) calloc(SIZE, sizeof(char));
             }
@@ -449,9 +497,8 @@ void functioncaller()
                     break;
                 }
                 files_count++;
-//                getchar();
             }
-            grep(files_count, files, string, flag, NULL);
+            grep(files_count, files, string, flag, arman);
 
             free(files);
             break;
@@ -466,6 +513,8 @@ void functioncaller()
         case AUTO_INDENT:
         {
             address = file_input();
+            if(address == NULL)
+                return;
 
             auto_indent(address);
             break;
@@ -473,22 +522,49 @@ void functioncaller()
         case COMPARE:
         {
             string = file_input();
-            string1 = file_input();
+            if(string == NULL)
+                break;
 
-            text_comparator(string, string1, NULL);
+            string1 = file_input();
+            if(string1 == NULL)
+                break;
+
+            text_comparator(string, string1, arman);
             break;
         }
         case TREE:
         {
-            address = file_input();
-            chdir(address + 1);
+            chdir("root");
             int depth = 0;
             scanf("%d", &depth);
 
-            tree(depth, depth, NULL);
+            tree(depth, depth, arman);
+            chdir("..");
             break;
         }
+        case ARMAN:
+        {
+            char *arman_arr = (char *) calloc(SIZE, sizeof(char));
+            functioncaller(arman_arr);
+
+            return;
+        }
+        case EXIT:
+        {
+            exit(0);
+        }
+        default:
+        {
+            char c;
+            while ((c = getchar()) != '\n');
+            errorOutput("ERROR: Invalid command.\n");
+            return;
+        }
         
+    }
+    if(arman != NULL)
+    {
+        functioncaller(arman);
     }
 
     free(order);
@@ -496,16 +572,14 @@ void functioncaller()
 
 int main()
 {
-    functioncaller();
+    while(1)
+    {
+        functioncaller(NULL);
+    }
 }
-//createfile --file "/root/te xt.txt"
-//undo --file "/root/te xt.txt"
-//auto-indent --file "/root/te xt.txt"
-//compare --file "/root/te xt.txt" --file /root/hidden.txt
-//find --str po* --file /root/test1/text.txt -all -byword -at 3 -count
-//replace --str pos --str gooz --file /root/test1/text.txt -at 1
-//replace --str pos --str gooz --file "/root/te xt.txt" -at 1
-//space avval byword
-//pastestr --file "/root/te xt.txt" --pos 1:0
-//{{}    {}}
-//grep - --str astr --files "/root/te xt.txt" /root/hidden.txt
+
+/*
+ *
+ to do list:
+ byWord with space at first.
+ */
