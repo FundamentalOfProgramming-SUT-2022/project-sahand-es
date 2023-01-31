@@ -175,7 +175,7 @@ void copyToHiddenFile(const char* address)
 
 void create_file(char address[])
 {
-    char dirname[SIZE] = {'\0'};
+    char* dirname = (char*) calloc(SIZE, sizeof (char));
     int first_slash = 0;
     int last_slash = 0;
     int iterate = 1;
@@ -229,7 +229,7 @@ void insert_str(const char address[],const char string[], int line, int position
     line--;
     int count = strlen(string), i = 0, j = 0, place = 0;
     char c, *name = (char*) address + 1, *text;
-    char final_string[SIZE] = {'\0'};
+    char* final_string = (char*) calloc(SIZE, sizeof (char));
 
     if(!fileExists(name))
     {
@@ -285,6 +285,7 @@ void insert_str(const char address[],const char string[], int line, int position
     {
         final_string[iter] = '\n';
         iter++;
+        position_counter = 0;
     }
     for(j = 0; j < position - position_counter && flag; j++)
     {
@@ -333,7 +334,7 @@ void cat(const char address[], char *arman)
 void remove_str(const char address[], int line, int position, int size, char b_f_flag)
 {
     line--;
-    char final_string[SIZE] = {'\0'};
+    char *final_string = (char *) calloc(SIZE, sizeof(char));
     char*name = (char*) address + 1, c;
     if(!fileExists(name))
     {
@@ -417,8 +418,9 @@ void copy_str(const char address[], int line, int position, int size, char b_f_f
 {
     line--;
     char c;
-    char temp[SIZE] = {'\0'};
-    char text[SIZE] = {'\0'}, *name = (char*) address + 1;
+    char* temp = (char*) calloc(SIZE, sizeof (char));
+    char* text = (char*) calloc(SIZE, sizeof (char));
+    char *name = (char*) address + 1;
     int line_counter = 0, position_counter = 0;
     if(!fileExists(name))
     {
@@ -492,6 +494,9 @@ void copy_str(const char address[], int line, int position, int size, char b_f_f
     EmptyClipboard();
     SetClipboardData(CF_TEXT, hMem);
     CloseClipboard();
+
+    free(temp);
+    free(text);
 }
 
 void cut_str(const char address[], int line, int position, int size, char b_f_flag)
@@ -502,11 +507,12 @@ void cut_str(const char address[], int line, int position, int size, char b_f_fl
 
 void paste(const char address[], int line, int position)
 {
-    char text[SIZE] = {'\0'};
+    char *text = (char*) calloc(SIZE, sizeof (char));
     OpenClipboard(0);
     strcpy(text ,(char*) GetClipboardData(CF_TEXT));
     CloseClipboard();
     insert_str(address, text, line, position);
+    free(text);
 }
 
 char* regex_build(const char* searchfor)
@@ -570,13 +576,18 @@ int isSeperator(char c)
 
 int byWord(const char text[], int offset)
 {
+    int i = 0;
+    while(!isSeperator(text[i]))
+    {
+        i++;
+    }
     int count = 0;
-    for(int i = 0; i < offset; i++)
+    for(; i < offset; i++)
     {
         if ((text[i] == ' ' || text[i] == '\n')&& text[i+1] != ' ')
             count++;
     }
-    return count + 1;
+    return count;
 }
 
 int **regex(const char* address, const char* pattern)
@@ -588,9 +599,9 @@ int **regex(const char* address, const char* pattern)
     }
     char *name = (char*) address + 1;
     char c;
-    char text[SIZE] = {'\0'};
+    char* text = (char*) calloc(SIZE, sizeof (char));
     int nmatch = 1, regex_iter = 0, regex_len = 0, match_start = 0,flag = 1, i = 0;
-    char regex[SIZE + 1] = {'\0'};
+    char* regex = calloc(SIZE + 1, sizeof (char));
     strcpy(regex, regex_build(pattern));
     regex_len = strlen(regex);
 
@@ -623,8 +634,16 @@ int **regex(const char* address, const char* pattern)
                 }
                 else
                 {
-                    regex_iter = 0;
-                    match_start = i + 1;
+                    if(regex_iter != 0 && regex[0] == text[i])
+                    {
+                        regex_iter = 1;
+                        match_start = i;
+                    }
+                    else
+                    {
+                        regex_iter = 0;
+                        match_start = i + 1;
+                    }
                 }
             }
             else if(isWildcard(regex + regex_iter))
@@ -646,9 +665,20 @@ int **regex(const char* address, const char* pattern)
                 }
                 else if(text[i] == regex[regex_iter + 3])
                 {
+                    int temp_regex_iter = regex_iter + 3;
+                    int wild_card_flag = 0;
                     for(int j = i; !isSeperator(text[j]); j++)
                     {
-                        if(text[j + 1] == regex[regex_iter + 3])
+                        if(text[j + 1] == regex[temp_regex_iter])
+                        {
+                            if(!isWildcard(regex + temp_regex_iter))
+                                temp_regex_iter++;
+                        }
+                        if(isWildcard(regex + temp_regex_iter))
+                        {
+                            wild_card_flag = 1;
+                        }
+                        if(temp_regex_iter == regex_len || wild_card_flag)
                         {
                             flag = 0;
                             break;
@@ -665,6 +695,7 @@ int **regex(const char* address, const char* pattern)
     } while (text[i] != '\0' && ++i);
 
     result[0][0] = nmatch - 1;
+    free(text);
     return result;
 }
 
@@ -710,16 +741,16 @@ void find(const char address[], const char pattern[], int flag, int at, char *ar
                 if (arman == NULL)
                 {
                     if(i != nmatch)
-                        printf("%d, ", result[i][0]);
+                        printf("%d, ", result[i][0] - 1);
                     else
-                        printf("%d", result[i][0]);
+                        printf("%d", result[i][0] - 1);
                 }
                 else
                 {
                     if(i != nmatch)
-                        sprintf(arman + strlen(arman),"%d, ", result[i][0]);
+                        sprintf(arman + strlen(arman),"%d, ", result[i][0] - 1);
                     else
-                        sprintf(arman + strlen(arman),"%d", result[i][0]);
+                        sprintf(arman + strlen(arman),"%d", result[i][0] - 1);
                 }
             }
             if(arman == NULL)
@@ -771,9 +802,9 @@ void find(const char address[], const char pattern[], int flag, int at, char *ar
                 }
             }
             if(arman == NULL)
-                printf("%d\n", result[at][0]);
+                printf("%d\n", result[at][0] - 1);
             else
-                sprintf(arman + strlen(arman),"%d\n", result[at][0]);
+                sprintf(arman + strlen(arman),"%d\n", result[at][0] - 1);
             break;
         }
         case AT | BYWORD:
@@ -815,8 +846,8 @@ void replace_str(const char address[], const char pattern[], const char replace[
 
     char *name = (char*) address + 1;
     char c;
-    char text[SIZE] = {'\0'};
-    char final_string[SIZE] = {'\0'};
+    char* text = (char*) calloc(SIZE, sizeof (char));
+    char* final_string = (char*) calloc(SIZE, sizeof (char));;
     int **result;
     result = regex(address,pattern);
     int res = 1, nmatch = result[0][0];
@@ -901,6 +932,9 @@ void replace_str(const char address[], const char pattern[], const char replace[
     fprintf(file_to_write, "%s", final_string);
 
     fclose(file_to_write);
+
+    free(text);
+    free(final_string);
 }
 
 char *file_name(char* name)
@@ -1089,7 +1123,7 @@ void auto_indent(const char* address)
         }
         else if (text[i] == '{')
         {
-            char correction[SIZE] = {'\0'};
+            char* correction = (char*) calloc(SIZE, sizeof (char));
             if(open_flag || close_flag)
             {
                 correction[0] = '\n';
@@ -1108,7 +1142,7 @@ void auto_indent(const char* address)
         else if (text[i] == '}')
         {
             open_count -= 4;
-            char correction[SIZE] = {'\0'};
+            char* correction = (char*) calloc(SIZE, sizeof (char));
             correction[0] = '\n';
             for(int k = 1; k < open_count + 1; k++)
             {
@@ -1265,8 +1299,8 @@ void text_comparator(const char* address1, const char* address2, char *arman)
     _read_(address2 + 1, text2);
     while(flag1 || flag2)
     {
-        char text1_line[SIZE] = {'\0'};
-        char text2_line[SIZE] = {'\0'};
+        char* text1_line = (char*) calloc(SIZE, sizeof (char));
+        char* text2_line = (char*) calloc(SIZE, sizeof (char));
         for(int i = line_start1; text1[i] != '\0'; i++)
         {
             if(text1[i] == '\n')

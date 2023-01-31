@@ -547,6 +547,7 @@ void functioncaller(char *arman)
             char *arman_arr = (char *) calloc(SIZE, sizeof(char));
             functioncaller(arman_arr);
 
+            free(arman_arr);
             return;
         }
         case EXIT:
@@ -577,9 +578,3 @@ int main()
         functioncaller(NULL);
     }
 }
-
-/*
- *
- to do list:
- byWord with space at first.
- */
