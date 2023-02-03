@@ -1,4 +1,5 @@
 #include "phase1Functions.c"
+
 enum ORDERS
         {
     CREATE,
@@ -571,10 +572,10 @@ void functioncaller(char *arman)
     free(order);
 }
 
-int main()
-{
-    while(1)
-    {
-        functioncaller(NULL);
-    }
-}
+//int main()
+//{
+//    while(1)
+//    {
+//        functioncaller(NULL);
+//    }
+//}

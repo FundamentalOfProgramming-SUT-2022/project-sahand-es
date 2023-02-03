@@ -11,7 +11,7 @@
 #include <dirent.h>
 
 
-#define SIZE 999999
+#define SIZE 1000000
 
 enum FIND_TYPES {COUNT = 1, AT = 1 << 1, BYWORD = 1 << 2, ALL = 1 << 3};
 
@@ -830,6 +830,22 @@ void find(const char address[], const char pattern[], int flag, int at, char *ar
                 sprintf(arman + strlen(arman),"%d\n", result[at][2]);
             break;
         }
+        case 0:
+        {
+            if (arman == NULL)
+                    printf("%d ", result[1][0]);
+            else
+                    sprintf(arman + strlen(arman),"%d", result[1][0]);
+            break;
+        }
+        case BYWORD:
+        {
+            if (arman == NULL)
+                printf("%d ", result[1][2]);
+            else
+                sprintf(arman + strlen(arman),"%d", result[1][2]);
+            break;
+        }
         default:
         {
             errorOutput("ERROR: Invalid flags for find function.\n");
@@ -1386,6 +1402,7 @@ void text_comparator(const char* address1, const char* address2, char *arman)
     free(text2);
     free(text1);
 }
+
 void tree(int depth, int first_depth, char *arman)
 {
     if(first_depth < -1)
