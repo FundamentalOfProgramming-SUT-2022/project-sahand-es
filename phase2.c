@@ -5,7 +5,6 @@
 #define WIDTH  100
 
 int** positions;
-int start_line = 0;
 
 enum colors
 {
@@ -28,6 +27,13 @@ enum modes
     INSERT_MODE,
     VISUAL_MODE,
     NORMAL_MODE
+};
+
+enum render
+{
+    _UP = -1,
+    _DOWN = 1,
+    _NOCHANGE = 10
 };
 
 void cPrint(int color, const char* text)
@@ -89,8 +95,10 @@ void initPositions()
     }
 }
 
-void Navigator(char c)
+int Navigator(char c, int l, const char* text)
 {
+    void ShowText(const char *text, int startline);
+
     COORD curr_pos = GetConsoleCursorPosition();
     int x = curr_pos.X;
     int y = curr_pos.Y;
@@ -100,12 +108,15 @@ void Navigator(char c)
         {
             if(y == 0)
             {
+                if(l > 0)
+                    return _UP;
                 break;
             }
-            else if(y == HEIGHT - 4 && start_line > 0)
+            else if(y == HEIGHT - 4 && l > 0)
             {
-                start_line--;
-                break;
+                l--;
+                ShowText(text, l);
+                return _UP;
             }
             else if(x >= positions[y-1][1] || x <= positions[y-1][0])
             {
@@ -123,10 +134,11 @@ void Navigator(char c)
             {
                 break;
             }
-            else if(y == HEIGHT - 4)
+            else if(y == HEIGHT - 4 && l <= HEIGHT + 2)
             {
-                start_line++;
-                break;
+                l++;
+                ShowText(text, l);
+                return _DOWN;
             }
             else if(x >= positions[y+1][1] || x <= positions[y+1][0])
             {
@@ -171,8 +183,9 @@ void Navigator(char c)
             break;
         }
         default:
-            return;
+            return _NOCHANGE;
     }
+    return 0;
 }
 
 char CursorCharRead()
@@ -246,9 +259,10 @@ void SetMode(int mode)
     SetCurser(0, 0);
 }
 
-void DelText()
+void ClearText()
 {
-    for(int i = 0; i < HEIGHT; i++)
+    SetCurser(0,0);
+    for(int i = 0; i <= HEIGHT; i++)
     {
         SetLine(WHITE);
         printf("\n");
@@ -256,18 +270,34 @@ void DelText()
     SetCurser(0,0);
 }
 
-void ShowText(const char *text)
+void ShowText(const char *text, int startline)
 {
     initPositions();
-    DelText();
+    COORD curr_cor = GetConsoleCursorPosition();
+    ClearText();
 
     int position = 2;
     int line = 0;
     char line_ps[10] = {'\0'};
-    sprintf(line_ps,"%d  ", line + 1);
-    cPrint(GRAY,line_ps);
-    int l = 2;
-    for(int i = 0; text[i] != '\0'; i++)
+    int l = 3, k;
+
+    int temp_startline = startline;
+    for(k = 0;text[k] != '\0' && temp_startline; k++)
+    {
+        if(text[k] == '\n')
+        {
+            temp_startline--;
+        }
+        if(!temp_startline)
+            break;
+    }
+    if(k != strlen(text))
+    {
+        sprintf(line_ps,"%d  ", line + 1 + startline);
+        cPrint(GRAY,line_ps);
+        l = strlen(line_ps);
+    }
+    for(int i = k + 1; text[i] != '\0'; i++)
     {
         if(text[i] == '\n')
         {
@@ -277,9 +307,9 @@ void ShowText(const char *text)
             if(line == HEIGHT + 1)
                 break;
             if(line < 10)
-                sprintf(line_p,"%d  ", line + 1);
+                sprintf(line_p,"%d  ", line + 1 + startline);
             else
-                sprintf(line_p,"%d ", line + 1);
+                sprintf(line_p,"%d ", line + 1 + startline);
 
             SetLine(GRAY);
             cPrint(GRAY,"\n");
@@ -287,7 +317,6 @@ void ShowText(const char *text)
             l = strlen(line_p);
             positions[line][0] = l;
             position = strlen(line_p);
-
         }
         else
         {
@@ -304,21 +333,175 @@ void ShowText(const char *text)
 //        SetLine(128)
     }
     printf("\n");
-    for(int k = line; k < HEIGHT; k++)
+    for(int a = line; a < HEIGHT; a++)
     {
         cPrint(BLUE,"~\n");
     }
-    SetCurser(2,0);
+    curr_cor.X = (curr_cor.X >= 3) ? curr_cor.X : 3;
+    curr_cor.X = (curr_cor.Y >= line) ? 0 : curr_cor.X;
+    SetCurser(curr_cor.X,curr_cor.Y);
 }
+
+//void ScrollText(char render, const char *text)
+//{
+//    }
+//}
 
 void BarCommand()
 {
-    char ch;
+    char ch, order[WIDTH] = {'\0'};
     SetCurser(0,HEIGHT + 2);
-    while((ch = getche()) != '\r' && ch != '\n');
+    while((ch = getche()) != '\r' && ch != '\n')
+    {
+//        if(ch == ':')
+//        {
+////            scanf("%s", order);
+//            functioncaller(NULL);
+////            printf("%s", order);
+//        }
+    };
     SetCurser(0,HEIGHT + 2);
     SetLine(WHITE);
     SetCurser(positions[0][0],0);
+}
+
+//void InsertMode(const char* address)
+//{
+//    COORD first_cor = GetConsoleCursorPosition();
+//
+//    void NormalMode(const char* address);
+//    char *text = (char*) calloc(SIZE, sizeof(char));
+//    char ch;
+//    _read_(address + 1, text);
+//
+//    SetMode(INSERT_MODE);
+//    SetName(file_name(address + 1), 0);
+//    ShowText(text, 0);
+//
+//    SetCurser(first_cor.X, first_cor.Y);
+//
+//    while((ch = getch()) != ':' && ch != '/')
+//    {
+//
+//    }
+//
+//}
+
+void VisualMode(const char* address)
+{
+    void NormalMode(const char* address);
+    COORD first_cor = GetConsoleCursorPosition();
+    char *text = (char*) calloc(SIZE, sizeof(char));
+    _read_(address + 1, text);
+
+    SetMode(VISUAL_MODE);
+    ShowText(text, 0);
+
+    SetCurser(first_cor.X, first_cor.Y);
+
+    char b_f_flag;
+    char ch, c;
+    int l = 0, size = 0;
+    while((ch = getch()) != 'd' && ch != 'y' && ch != 'v' && ch != 'v')
+    {
+        if(ch == 'k' || ch == 'j')
+        {
+            size = 0;
+            first_cor = GetConsoleCursorPosition();
+            ShowText(text, l);
+        }
+        int render = Navigator(ch, l, text);
+        if(render != _NOCHANGE)
+        {
+            l += render;
+            c = CursorCharRead();
+            char s[10] = {'\0'};
+            strncat(s, &c, 1);
+
+            if(ch == 'l')
+            {
+                size++;
+                if(size < 0)
+                {
+//                    Navigator('h', l, text);
+                    cPrint(WHITE, s);
+                }
+                else
+                    cPrint(16, s);
+                Navigator('h', l, text);
+            }
+            else if(ch == 'h')
+            {
+                size--;
+                if(size > 0)
+                    cPrint(WHITE, s);
+                else
+                    cPrint(16, s);
+                Navigator('h', l, text);
+            }
+            else
+            {
+                c = CursorCharRead();
+                char s[10] = {'\0'};
+                strncat(s, &c, 1);
+                cPrint(16, s);
+                Navigator('h', l, text);
+            }
+        }
+    }
+
+    b_f_flag = size < 0 ? 'b' : 'f';
+    size = size < 0 ? -1 * size : size;
+
+    free(text);
+
+    if(ch == 'y')
+    {
+        copy_str(address, first_cor.Y + 1 + l, first_cor.X - positions[first_cor.Y][0], size,b_f_flag);
+        NormalMode(address);
+    }
+    else if(ch == 'd')
+    {
+        cut_str(address, first_cor.Y + 1 + l, first_cor.X - positions[first_cor.Y][0], size,b_f_flag);
+        NormalMode(address);
+    }
+    else if(ch == 'v')
+    {
+        NormalMode(address);
+    }
+    else if(ch == 'i')
+    {
+        InsertMode(address);
+    }
+
+}
+
+void NormalMode(const char* address)
+{
+    char *text = (char*) calloc(SIZE, sizeof(char));
+    char ch;
+    _read_(address + 1, text);
+    int l = 0;
+    COORD first_cor = GetConsoleCursorPosition();
+
+    SetMode(NORMAL_MODE);
+    SetName(file_name(address + 1), 0);
+    ShowText(text, 0);
+    SetCurser(first_cor.X, first_cor.Y);
+
+    while((ch = getch()) != ':' && ch != '/' && ch != 'i' && ch != 'v')
+    {
+        int render = Navigator(ch, l, text);
+        if(render != _NOCHANGE)
+            l += render;
+    }
+    if(ch == ':' || ch == '/')
+        BarCommand();
+    else if(ch == 'i')
+        InsertMode(address);
+    else if(ch == 'v')
+        VisualMode(address);
+
 }
 
 int main()
@@ -328,14 +511,22 @@ int main()
     SetConsoleTitle("Vim");
     SetWindow(WIDTH, HEIGHT);
     char ch;
-    SetMode(NORMAL_MODE);
+    SetMode(VISUAL_MODE);
     SetName("GOOZ",1);
 //    ShowText("a\nsa");
 //    ShowText("");
-    ShowText("sahand1\nsahand2\nsdf as\ndf asdf\n sadf asdfa\ndf asdf s\nadf\nsahand5\nsdf a\nsdf asdf\na asdf as\nsahnad6");
+
+//    VisualMode("/root/=Dtest.txt");
+    NormalMode("/root/=Dtest.txt");
+
+    char text[] = "sahand1\nsahand2\nsdf as\ndf asdf\n sadf asdfa\ndf asdf s\nadf\nsahand5\nsdf a\nsdf asdf\na asdf as\nsahnad6'\0";
+    ShowText(text, 0);
+    int l = 0;
     while((ch = getch()) != 'Q')
     {
-        Navigator(ch);
+        int render = Navigator(ch, l, text);
+        if(render != _NOCHANGE)
+            l += render;
         if(ch == '/' || ch == ':')
         {
             BarCommand();
