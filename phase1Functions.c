@@ -1177,6 +1177,8 @@ void auto_indent(const char* address)
         }
     }
 
+    copyToHiddenFile(address);
+
     _write_(address + 1, final_string);
 
 

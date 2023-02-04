@@ -3,7 +3,8 @@
 
 #define HEIGHT 20
 #define WIDTH  80
-
+#define OUTPUT_NAME "ooutput.txt"
+#define OUTPUT_ADDRESS "/o:::output.txt"
 int** positions;
 
 enum colors
@@ -321,7 +322,7 @@ void ShowText(const char *text, int startline)
     int position = 2;
     int line = 0;
     char line_ps[10] = {'\0'};
-    int l = 3, k;
+    int l = 3, k = 0;
 
     int temp_startline = startline;
     for(k = 0;text[k] != '\0' && temp_startline; k++)
@@ -339,6 +340,7 @@ void ShowText(const char *text, int startline)
         cPrint(GRAY,line_ps);
         l = strlen(line_ps);
     }
+    k = k == 0 ? -1 : k;
     for(int i = k + 1; text[i] != '\0'; i++)
     {
         if(text[i] == '\n')
@@ -578,21 +580,27 @@ void Open(const char* address)
             return;
     }
 }
+
+void _write_output(const char* text)
+{
+    _write_(OUTPUT_NAME, text);
+}
+
 void functioncaller(char *arman)
 {
     int *find_flags_arr;
     char *order = (char*) calloc(SIZE, sizeof(char));
     char *address = NULL, *string = NULL, flag = '\0', *string1;
     int *line_position, size = 0;
-
-    if(arman != NULL)
-    {
-        if(*arman != '\0')
-        {
-            string = arman;
-            arman = NULL;
-        }
-    }
+//
+//    if(arman != NULL)
+//    {
+//        if(*arman != '\0')
+//        {
+//            string = arman;
+//            arman = NULL;
+//        }
+//    }
 
     scanf("%s", order);
     switch (whichFunction(order))
@@ -630,6 +638,8 @@ void functioncaller(char *arman)
                 break;
 
             cat(address,arman);
+
+            _write_output(arman);
 
             break;
         }
@@ -694,6 +704,8 @@ void functioncaller(char *arman)
             find_flags_arr = find_flags();
 
             find(address, string, find_flags_arr[0], find_flags_arr[1], arman);
+            _write_output(arman);
+
             break;
         }
         case REPLACE:
@@ -734,6 +746,8 @@ void functioncaller(char *arman)
             }
             grep(files_count, files, string, flag, arman);
 
+            _write_output(arman);
+
             free(files);
             break;
         }
@@ -764,6 +778,9 @@ void functioncaller(char *arman)
                 break;
 
             text_comparator(string, string1, arman);
+
+            _write_output(arman);
+
             break;
         }
         case TREE:
@@ -773,17 +790,20 @@ void functioncaller(char *arman)
             scanf("%d", &depth);
 
             tree(depth, depth, arman);
+
+            _write_output(arman);
+
             chdir("..");
             break;
         }
-        case ARMAN:
-        {
-            char *arman_arr = (char *) calloc(SIZE, sizeof(char));
-            functioncaller(arman_arr);
-
-            free(arman_arr);
-            return;
-        }
+//        case ARMAN:
+//        {
+//            char *arman_arr = (char *) calloc(SIZE, sizeof(char));
+//            functioncaller(arman_arr);
+//
+//            free(arman_arr);
+//            return;
+//        }
         case EXIT:
         {
             exit(0);
@@ -797,10 +817,10 @@ void functioncaller(char *arman)
         }
 
     }
-    if(arman != NULL)
-    {
-        functioncaller(arman);
-    }
+//    if(arman != NULL)
+//    {
+//        functioncaller(arman);
+//    }
 
     free(order);
 }
@@ -823,10 +843,17 @@ void BarCommand()
         }
         else if(ch == ':')
         {
+            char *arman_arr = (char *) calloc(SIZE, sizeof(char));
 //            cPrint(WHITE, ":");
 //            SetCurser(0,HEIGHT :::://;sdfakljl+ 2);
 //            SetLine(WHITE);
-            functioncaller(NULL);
+            functioncaller(arman_arr);
+            if(arman_arr[0] != '\0')
+            {
+
+                ClearBC();
+                Open("/ooutput.txt");
+            }
             ClearBC();
         }
     };
@@ -838,17 +865,9 @@ void BarCommand()
 
 int main()
 {
-    HANDLE Handle = GetStdHandle(STD_OUTPUT_HANDLE);
-
     SetConsoleTitle("Vim");
     SetWindow(WIDTH, HEIGHT);
-    char ch;
-
-    char address[] = "/root/=Dtest.txt\0";
-    ch = NormalMode(address);
-
+    
     while(1)
-    {
-        ch = ModeChanger(ch, address);
-    }
+        BarCommand();
 }
