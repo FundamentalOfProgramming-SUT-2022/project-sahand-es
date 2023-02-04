@@ -2,6 +2,7 @@
 
 enum ORDERS
         {
+    OPEN,
     CREATE,
     INSERT,
     REMOVE,
@@ -25,6 +26,10 @@ int whichFunction(const char* order)
     if(!strcmp(order, "create"))
     {
         return CREATE;
+    }
+    else if(!strcmp(order, "open"))
+    {
+        return OPEN;
     }
     else if(!strcmp(order, "insert"))
     {
@@ -356,227 +361,6 @@ int* find_flags()
     flags[0] = flag;
     flags[1] = at;
     return flags;
-}
-
-void functioncaller(char *arman)
-{
-    int *find_flags_arr;
-    char *order = (char*) calloc(SIZE, sizeof(char));
-    char *address = NULL, *string = NULL, flag = '\0', *string1;
-    int *line_position, size = 0;
-
-    if(arman != NULL)
-    {
-        if(*arman != '\0')
-        {
-            string = arman;
-            arman = NULL;
-        }
-    }
-
-    scanf("%s", order);
-    switch (whichFunction(order))
-    {
-        case CREATE:
-        {
-            address = file_input();
-            if(address == NULL)
-                break;
-            create_file(address);
-            break;
-        }
-        case INSERT:
-        {
-            address = file_input();
-            if(address == NULL)
-                break;
-            if(string == NULL)
-                string = string_input();
-            line_position = pos_input();
-            insert_str(address, string, line_position[0], line_position[1]);
-
-            break;
-        }
-        case CAT:
-        {
-            address = file_input();
-            if(address == NULL)
-                break;
-
-            cat(address,arman);
-
-            break;
-        }
-        case REMOVE:
-        {
-            address = file_input();
-            if(address == NULL)
-                break;
-
-            line_position = pos_input();
-            size = size_input();
-            flag = b_f_flag_input();
-            remove_str(address, line_position[0], line_position[1], size, flag);
-
-            break;
-        }
-        case COPY:
-        {
-            address = file_input();
-            if(address == NULL)
-                break;
-
-            line_position = pos_input();
-            size = size_input();
-            flag = b_f_flag_input();
-            copy_str(address, line_position[0], line_position[1], size, flag);
-
-            break;
-        }
-        case CUT:
-        {
-            address = file_input();
-            if(address == NULL)
-                break;
-
-            line_position = pos_input();
-            size = size_input();
-            flag = b_f_flag_input();
-            cut_str(address, line_position[0], line_position[1], size, flag);
-
-            break;
-        }
-        case PASTE:
-        {
-            address = file_input();
-            if(address == NULL)
-                break;
-
-            line_position = pos_input();
-            paste(address, line_position[0], line_position[1]);
-
-            break;
-        }
-        case FIND:
-        {
-            if(string == NULL)
-                string = string_input();
-            address = file_input();
-            if(address == NULL)
-                break;
-
-            find_flags_arr = find_flags();
-
-            find(address, string, find_flags_arr[0], find_flags_arr[1], arman);
-            break;
-        }
-        case REPLACE:
-        {
-            string = string_input();
-            string1 = string_input();
-            address = file_input();
-            if(address == NULL)
-                break;
-
-            find_flags_arr = find_flags();
-
-            replace_str(address, string, string1, find_flags_arr[0], find_flags_arr[1]);
-            break;
-        }
-        case GREP:
-        {
-            int files_count = 0;
-            scanf(" -%c ", &flag);
-            if(flag == ' ')
-                flag = '\0';
-            if(string == NULL)
-                string = string_input();
-            scanf(" --files ");
-            char** files = (char **) calloc(100, sizeof (char*));
-            for(int i = 0; i < 100; i++)
-            {
-                *(files + i) = (char *) calloc(SIZE, sizeof(char));
-            }
-            while(1)
-            {
-                files[files_count] = grep_files_input();
-                if(files[files_count] == NULL)
-                {
-                    break;
-                }
-                files_count++;
-            }
-            grep(files_count, files, string, flag, arman);
-
-            free(files);
-            break;
-        }
-        case UNDO:
-        {
-            address = file_input();
-
-            undo(address);
-            break;
-        }
-        case AUTO_INDENT:
-        {
-            address = file_input();
-            if(address == NULL)
-                return;
-
-            auto_indent(address);
-            break;
-        }
-        case COMPARE:
-        {
-            string = file_input();
-            if(string == NULL)
-                break;
-
-            string1 = file_input();
-            if(string1 == NULL)
-                break;
-
-            text_comparator(string, string1, arman);
-            break;
-        }
-        case TREE:
-        {
-            chdir("root");
-            int depth = 0;
-            scanf("%d", &depth);
-
-            tree(depth, depth, arman);
-            chdir("..");
-            break;
-        }
-        case ARMAN:
-        {
-            char *arman_arr = (char *) calloc(SIZE, sizeof(char));
-            functioncaller(arman_arr);
-
-            free(arman_arr);
-            return;
-        }
-        case EXIT:
-        {
-            exit(0);
-        }
-        default:
-        {
-            char c;
-            while ((c = getchar()) != '\n');
-            errorOutput("ERROR: Invalid command.\n");
-            return;
-        }
-
-    }
-    if(arman != NULL)
-    {
-        functioncaller(arman);
-    }
-
-    free(order);
 }
 
 //int main()
