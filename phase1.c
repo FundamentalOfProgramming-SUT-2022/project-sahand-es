@@ -244,6 +244,13 @@ char *string_input()
                     do
                     {
                         c = getchar();
+                        if(c == '"')
+                        {
+                            if (string[i - 1] != '\\')
+                            {
+                                return string;
+                            }
+                        }
                         string[i] = c;
                         i++;
                     }
@@ -562,7 +569,7 @@ void functioncaller(char *arman)
             errorOutput("ERROR: Invalid command.\n");
             return;
         }
-        
+
     }
     if(arman != NULL)
     {

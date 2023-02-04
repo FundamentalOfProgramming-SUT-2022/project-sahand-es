@@ -1,9 +1,11 @@
 #include "phase1.c"
 #include <conio.h>
 
-#define HEIGHT 35
+#define HEIGHT 10
 #define WIDTH  100
 
+int** positions;
+int start_line = 0;
 
 enum colors
 {
@@ -36,7 +38,6 @@ void cPrint(int color, const char* text)
     printf("%s", text);
     SetConsoleTextAttribute(hConsole, 7);
 }
-
 
 void SetWindow(int Width, int Height)
 {
@@ -79,7 +80,16 @@ COORD GetConsoleCursorPosition()
     }
 }
 
-void navigator(char c)
+void initPositions()
+{
+    positions = (int**) calloc(SIZE, sizeof(int*));
+    for(int i = 0; i < SIZE; i++)
+    {
+        *(positions + i) = (int*) calloc(2, sizeof (int));
+    }
+}
+
+void Navigator(char c)
 {
     COORD curr_pos = GetConsoleCursorPosition();
     int x = curr_pos.X;
@@ -88,7 +98,20 @@ void navigator(char c)
     {
         case 'k':
         {
-            if(y >= 1)
+            if(y == 0)
+            {
+                break;
+            }
+            else if(y == HEIGHT - 4 && start_line > 0)
+            {
+                start_line--;
+                break;
+            }
+            else if(x >= positions[y-1][1] || x <= positions[y-1][0])
+            {
+                SetCurser(positions[y-1][1], y-1);
+            }
+            else
             {
                 SetCurser(x, y-1);
             }
@@ -96,7 +119,20 @@ void navigator(char c)
         }
         case 'j':
         {
-            if(y <= HEIGHT - 1)
+            if(y == HEIGHT)
+            {
+                break;
+            }
+            else if(y == HEIGHT - 4)
+            {
+                start_line++;
+                break;
+            }
+            else if(x >= positions[y+1][1] || x <= positions[y+1][0])
+            {
+                SetCurser(positions[y+1][1], y+1);
+            }
+            else
             {
                 SetCurser(x, y+1);
             }
@@ -104,29 +140,33 @@ void navigator(char c)
         }
         case 'h':
         {
-            if(x >= 1)
+            if(y == 0 && x == positions[0][0])
+            {
+                break;
+            }
+            else if(x == positions[y][0])
+            {
+                SetCurser(positions[y-1][1], y-1);
+            }
+            else
             {
                 SetCurser(x-1, y);
-            }
-            else if(x == 0)
-            {
-                if(y >= 1)
-                    SetCurser(WIDTH, y-1);
             }
             break;
         }
         case 'l':
         {
-            if(x <= WIDTH - 1)
+            if(y == HEIGHT && x == positions[HEIGHT][1])
+            {
+                break;
+            }
+            else if(x == positions[y][1])
+            {
+                SetCurser(positions[y+1][0], y+1);
+            }
+            else
             {
                 SetCurser(x+1, y);
-            }
-            else if(x == WIDTH)
-            {
-                if(y < HEIGHT)
-                {
-                    SetCurser(0, y+1);
-                }
             }
             break;
         }
@@ -134,6 +174,7 @@ void navigator(char c)
             return;
     }
 }
+
 char CursorCharRead()
 {
     char buf[BUFSIZ];
@@ -161,6 +202,7 @@ void SetLine(int color)
         cPrint(color," ");
     }
 }
+
 void SetName(const char* file_name, int saved)
 {
     char unsaved[10] = {'\0'};
@@ -202,8 +244,73 @@ void SetMode(int mode)
     SetCurser(0,HEIGHT + 1);
     cPrint(BLUE * 6 + WHITE + 2,  mode_name);
     SetCurser(0, 0);
-
 }
+
+void DelText()
+{
+    for(int i = 0; i < HEIGHT; i++)
+    {
+        SetLine(WHITE);
+        printf("\n");
+    }
+    SetCurser(0,0);
+}
+
+void ShowText(const char *text)
+{
+    initPositions();
+    DelText();
+
+    int position = 2;
+    int line = 0;
+    char line_ps[10] = {'\0'};
+    sprintf(line_ps,"%d  ", line + 1);
+    cPrint(GRAY,line_ps);
+    int l = 2;
+    for(int i = 0; text[i] != '\0'; i++)
+    {
+        if(text[i] == '\n')
+        {
+            positions[line][1] = position;
+            char line_p[10] = {'\0'};
+            line++;
+            if(line == HEIGHT + 1)
+                break;
+            if(line < 10)
+                sprintf(line_p,"%d  ", line + 1);
+            else
+                sprintf(line_p,"%d ", line + 1);
+
+            SetLine(GRAY);
+            cPrint(GRAY,"\n");
+            cPrint(GRAY, line_p);
+            l = strlen(line_p);
+            positions[line][0] = l;
+            position = strlen(line_p);
+
+        }
+        else
+        {
+            positions[line][0] = l;
+            position++;
+            char s[10] = {'\0'};
+            strncat(s, text + i, 1);
+            cPrint(WHITE, s);
+        }
+        if(text[i+1] == '\0')
+        {
+            positions[line][1] = position;
+        }
+//        SetLine(128)
+    }
+    printf("\n");
+    for(int k = line; k < HEIGHT; k++)
+    {
+        cPrint(BLUE,"~\n");
+    }
+    SetCurser(2,0);
+}
+
 void BarCommand()
 {
     char ch;
@@ -211,25 +318,40 @@ void BarCommand()
     while((ch = getche()) != '\r' && ch != '\n');
     SetCurser(0,HEIGHT + 2);
     SetLine(WHITE);
-    SetCurser(0,0);
+    SetCurser(positions[0][0],0);
 }
+
 int main()
 {
+    HANDLE Handle = GetStdHandle(STD_OUTPUT_HANDLE);
+
     SetConsoleTitle("Vim");
     SetWindow(WIDTH, HEIGHT);
     char ch;
-    SetMode(INSERT_MODE);
+    SetMode(NORMAL_MODE);
     SetName("GOOZ",1);
+//    ShowText("a\nsa");
+//    ShowText("");
+    ShowText("sahand1\nsahand2\nsdf as\ndf asdf\n sadf asdfa\ndf asdf s\nadf\nsahand5\nsdf a\nsdf asdf\na asdf as\nsahnad6");
     while((ch = getch()) != 'Q')
     {
-        navigator(ch);
+        Navigator(ch);
         if(ch == '/' || ch == ':')
         {
             BarCommand();
         }
         if(ch == 'f')
         {
-            SetName("KOS NANE ALAEI", 1);
+            SetName("YOU SURE?", 1);
+            ch = getch();
+            if(ch == 'y')
+            {
+                SetName("KOS NANE ALAEI XD.", 0);
+            }
+            else
+            {
+                SetName("GOOZ",1);
+            }
         }
     }
 

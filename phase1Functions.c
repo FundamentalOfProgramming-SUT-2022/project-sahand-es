@@ -19,7 +19,7 @@ void errorOutput(char *ERORR)
 {
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
 
-    SetConsoleTextAttribute(hConsole, FOREGROUND_RED);
+    SetConsoleTextAttribute(hConsole, 12);
     printf("%s", ERORR);
     SetConsoleTextAttribute(hConsole, 7);
 
@@ -318,17 +318,20 @@ void cat(const char address[], char *arman)
 
     if(arman == NULL)
     {
+        printf("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
         while ((c = fgetc(file_to_read)) != EOF)
         {
             printf("%c", c);
         }
         printf("\n");
+        printf("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
     }
     else
     {
         _read_(address + 1, arman);
         strcat(arman, "\n");
     }
+
 }
 
 void remove_str(const char address[], int line, int position, int size, char b_f_flag)
@@ -473,9 +476,12 @@ void copy_str(const char address[], int line, int position, int size, char b_f_f
                 strncat(temp, &c, 1);
             }
             int ii = 0;
+            int l = strlen(temp);
+            if(size > l)
+                size = l;
             for(int i = size - 1; i >= 0; i--)
             {
-                int l = strlen(temp);
+
                 text[ii] = temp[strlen(temp) - i - 1];
                 ii++;
             }
@@ -835,7 +841,7 @@ void find(const char address[], const char pattern[], int flag, int at, char *ar
             if (arman == NULL)
                     printf("%d ", result[1][0]);
             else
-                    sprintf(arman + strlen(arman),"%d", result[1][0]);
+                    sprintf(arman + strlen(arman),"%d", result[1][0] - 1);
             break;
         }
         case BYWORD:
