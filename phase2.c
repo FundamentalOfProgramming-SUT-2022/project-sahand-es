@@ -1,8 +1,8 @@
 #include "phase1.c"
 #include <conio.h>
 
-#define HEIGHT 10
-#define WIDTH  100
+#define HEIGHT 20
+#define WIDTH  80
 
 int** positions;
 
@@ -28,6 +28,9 @@ enum modes
     VISUAL_MODE,
     NORMAL_MODE
 };
+
+int last_mode = NORMAL_MODE;
+int last_l = 0;
 
 enum render
 {
@@ -134,7 +137,7 @@ int Navigator(char c, int l, const char* text)
             {
                 break;
             }
-            else if(y == HEIGHT - 4 && l <= HEIGHT + 2)
+            else if(y == HEIGHT - 4 && (l <= HEIGHT + charNumToLine(text,strlen(text) - 1)))
             {
                 l++;
                 ShowText(text, l);
@@ -152,7 +155,13 @@ int Navigator(char c, int l, const char* text)
         }
         case 'h':
         {
-            if(y == 0 && x == positions[0][0])
+            if(y == 0 && x == positions[0][0] && l > 0)
+            {
+                l--;
+                ShowText(text, l);
+                return _UP;
+            }
+            else if(y == 0 && x == positions[0][0])
             {
                 break;
             }
@@ -168,7 +177,14 @@ int Navigator(char c, int l, const char* text)
         }
         case 'l':
         {
-            if(y == HEIGHT && x == positions[HEIGHT][1])
+            if(y == HEIGHT && x == positions[HEIGHT][1] && l <= HEIGHT + charNumToLine(text,strlen(text) - 1))
+            {
+                l++;
+                ShowText(text, l);
+                SetCurser(positions[y][0], y);
+                return _DOWN;
+            }
+            else if(y == HEIGHT && x == positions[HEIGHT][1])
             {
                 break;
             }
@@ -255,7 +271,7 @@ void SetMode(int mode)
             return;
     }
     SetCurser(0,HEIGHT + 1);
-    cPrint(BLUE * 6 + WHITE + 2,  mode_name);
+    cPrint(144,  mode_name);
     SetCurser(0, 0);
 }
 
@@ -270,8 +286,27 @@ void ClearText()
     SetCurser(0,0);
 }
 
+void hideCursor()
+{
+    HANDLE consoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+    CONSOLE_CURSOR_INFO info;
+    info.dwSize = 100;
+    info.bVisible = FALSE;
+    SetConsoleCursorInfo(consoleHandle, &info);
+}
+
+void showCursor()
+{
+    HANDLE consoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+    CONSOLE_CURSOR_INFO info;
+    info.dwSize = 100;
+    info.bVisible = TRUE;
+    SetConsoleCursorInfo(consoleHandle, &info);
+}
+
 void ShowText(const char *text, int startline)
 {
+    hideCursor();
     initPositions();
     COORD curr_cor = GetConsoleCursorPosition();
     ClearText();
@@ -301,6 +336,7 @@ void ShowText(const char *text, int startline)
     {
         if(text[i] == '\n')
         {
+            positions[line][0] = l;
             positions[line][1] = position;
             char line_p[10] = {'\0'};
             line++;
@@ -340,12 +376,8 @@ void ShowText(const char *text, int startline)
     curr_cor.X = (curr_cor.X >= 3) ? curr_cor.X : 3;
     curr_cor.X = (curr_cor.Y >= line) ? 0 : curr_cor.X;
     SetCurser(curr_cor.X,curr_cor.Y);
+    showCursor();
 }
-
-//void ScrollText(char render, const char *text)
-//{
-//    }
-//}
 
 void BarCommand()
 {
@@ -365,43 +397,53 @@ void BarCommand()
     SetCurser(positions[0][0],0);
 }
 
-//void InsertMode(const char* address)
-//{
-//    COORD first_cor = GetConsoleCursorPosition();
-//
-//    void NormalMode(const char* address);
-//    char *text = (char*) calloc(SIZE, sizeof(char));
-//    char ch;
-//    _read_(address + 1, text);
-//
-//    SetMode(INSERT_MODE);
-//    SetName(file_name(address + 1), 0);
-//    ShowText(text, 0);
-//
-//    SetCurser(first_cor.X, first_cor.Y);
-//
-//    while((ch = getch()) != ':' && ch != '/')
-//    {
-//
-//    }
-//
-//}
-
-void VisualMode(const char* address)
+char InsertMode(const char* address)
 {
-    void NormalMode(const char* address);
+    last_mode = VISUAL_MODE;
+
+    COORD first_cor = GetConsoleCursorPosition();
+
+    char *text = (char*) calloc(SIZE, sizeof(char));
+    char ch;
+    _read_(address + 1, text);
+
+    SetMode(INSERT_MODE);
+    SetName(file_name(address + 1), 0);
+    ShowText(text, 0);
+
+    SetCurser(first_cor.X, first_cor.Y);
+
+    while((ch = getch()) != ':' && ch != '/')
+    {
+
+    }
+
+}
+
+char VisualMode(const char* address)
+{
+    last_mode = VISUAL_MODE;
+
     COORD first_cor = GetConsoleCursorPosition();
     char *text = (char*) calloc(SIZE, sizeof(char));
     _read_(address + 1, text);
 
     SetMode(VISUAL_MODE);
-    ShowText(text, 0);
+    SetName(file_name(address + 1), 0);
+    ShowText(text, last_l);
 
     SetCurser(first_cor.X, first_cor.Y);
 
     char b_f_flag;
     char ch, c;
-    int l = 0, size = 0;
+    int l = last_l, size = 0;
+
+    c = CursorCharRead();
+    char s[10] = {'\0'};
+    strncat(s, &c, 1);
+    cPrint(16, s);
+    Navigator('h', l, text);
+
     while((ch = getch()) != 'd' && ch != 'y' && ch != 'v' && ch != 'v')
     {
         if(ch == 'k' || ch == 'j')
@@ -458,35 +500,28 @@ void VisualMode(const char* address)
     if(ch == 'y')
     {
         copy_str(address, first_cor.Y + 1 + l, first_cor.X - positions[first_cor.Y][0], size,b_f_flag);
-        NormalMode(address);
     }
     else if(ch == 'd')
     {
         cut_str(address, first_cor.Y + 1 + l, first_cor.X - positions[first_cor.Y][0], size,b_f_flag);
-        NormalMode(address);
     }
-    else if(ch == 'v')
-    {
-        NormalMode(address);
-    }
-    else if(ch == 'i')
-    {
-        InsertMode(address);
-    }
-
+    last_l = l;
+    return ch;
 }
 
-void NormalMode(const char* address)
+char NormalMode(const char* address)
 {
+    last_mode = NORMAL_MODE;
+
     char *text = (char*) calloc(SIZE, sizeof(char));
     char ch;
     _read_(address + 1, text);
-    int l = 0;
+    int l = last_l;
     COORD first_cor = GetConsoleCursorPosition();
 
     SetMode(NORMAL_MODE);
     SetName(file_name(address + 1), 0);
-    ShowText(text, 0);
+    ShowText(text, last_l);
     SetCurser(first_cor.X, first_cor.Y);
 
     while((ch = getch()) != ':' && ch != '/' && ch != 'i' && ch != 'v')
@@ -497,11 +532,35 @@ void NormalMode(const char* address)
     }
     if(ch == ':' || ch == '/')
         BarCommand();
-    else if(ch == 'i')
-        InsertMode(address);
-    else if(ch == 'v')
-        VisualMode(address);
+    last_l = l;
+    return ch;
+}
 
+char ModeChanger(char ch, const char* address)
+{
+    switch (last_mode)
+    {
+        case NORMAL_MODE:
+        {
+            if(ch == 'i')
+                ch = InsertMode(address);
+            else if(ch == 'v')
+                ch =VisualMode(address);
+            break;
+        }
+        case VISUAL_MODE:
+        {
+            if(ch == 'd' || ch == 'y' || ch == 'v')
+            {
+                ch = NormalMode(address);
+            }
+            else if(ch == 'i')
+            {
+                ch = InsertMode(address);
+            }
+        }
+    }
+    return ch;
 }
 
 int main()
@@ -511,58 +570,12 @@ int main()
     SetConsoleTitle("Vim");
     SetWindow(WIDTH, HEIGHT);
     char ch;
-    SetMode(VISUAL_MODE);
-    SetName("GOOZ",1);
-//    ShowText("a\nsa");
-//    ShowText("");
 
-//    VisualMode("/root/=Dtest.txt");
-    NormalMode("/root/=Dtest.txt");
+    char address[] = "/root/=Dtest.txt\0";
+    ch = NormalMode(address);
 
-    char text[] = "sahand1\nsahand2\nsdf as\ndf asdf\n sadf asdfa\ndf asdf s\nadf\nsahand5\nsdf a\nsdf asdf\na asdf as\nsahnad6'\0";
-    ShowText(text, 0);
-    int l = 0;
-    while((ch = getch()) != 'Q')
+    while(1)
     {
-        int render = Navigator(ch, l, text);
-        if(render != _NOCHANGE)
-            l += render;
-        if(ch == '/' || ch == ':')
-        {
-            BarCommand();
-        }
-        if(ch == 'f')
-        {
-            SetName("YOU SURE?", 1);
-            ch = getch();
-            if(ch == 'y')
-            {
-                SetName("KOS NANE ALAEI XD.", 0);
-            }
-            else
-            {
-                SetName("GOOZ",1);
-            }
-        }
+        ch = ModeChanger(ch, address);
     }
-
 }
-//int main()
-//{
-//    SetConsoleTitle("Vim");
-//    SetWindow(WIDTH, HEIGHT);
-//    char ch;
-//    printf("some god\nfddsflma\nasdfasdf s          \nadsf         asd\f\n");
-//    SetCurser(0,0);
-////printf("\n");
-//    while((ch = getch()) != 'Q')
-//    {
-//        navigator(ch);
-//        char c = CursorCharRead();
-//        if(ch == '\b')
-//        {
-//            printf(" ");
-//            navigator('h');
-//        }
-//    }
-//}
