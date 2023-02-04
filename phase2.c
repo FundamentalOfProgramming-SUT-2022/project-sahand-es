@@ -30,8 +30,15 @@ enum modes
     NORMAL_MODE
 };
 
+enum succsses
+{
+    FAILED,
+    DONE
+};
+
 int last_mode = NORMAL_MODE;
 int last_l = 0;
+int arman_flag = 0;
 
 enum render
 {
@@ -53,12 +60,12 @@ void SetWindow(int Width, int Height)
 {
     COORD coord;
     coord.X = Width;
-    coord.Y = Height + 2;
+    coord.Y = Height + 3;
 
     SMALL_RECT Rect;
     Rect.Top = 0;
     Rect.Left = 0;
-    Rect.Bottom = Height + 2;
+    Rect.Bottom = Height + 3;
     Rect.Right = Width;
 
     HANDLE Handle = GetStdHandle(STD_OUTPUT_HANDLE);      // Get Handle
@@ -534,6 +541,7 @@ char NormalMode(const char* address)
 char ModeChanger(char ch, const char* address)
 {
     void BarCommand();
+    void ClearBC();
     switch (last_mode)
     {
         case NORMAL_MODE:
@@ -543,7 +551,10 @@ char ModeChanger(char ch, const char* address)
             else if(ch == 'v')
                 ch =VisualMode(address);
             else if(ch == ':' || ch == '/')
+            {
+                ClearBC();
                 BarCommand();
+            }
             break;
         }
         case VISUAL_MODE:
@@ -557,7 +568,10 @@ char ModeChanger(char ch, const char* address)
                 ch = InsertMode(address);
             }
             else if(ch == ':' || ch == '/')
+            {
+                ClearBC();
                 BarCommand();
+            }
         }
     }
     return ch;
@@ -586,21 +600,13 @@ void _write_output(const char* text)
     _write_(OUTPUT_NAME, text);
 }
 
-void functioncaller(char *arman)
+int functioncaller(char *arman)
 {
     int *find_flags_arr;
     char *order = (char*) calloc(SIZE, sizeof(char));
     char *address = NULL, *string = NULL, flag = '\0', *string1;
     int *line_position, size = 0;
-//
-//    if(arman != NULL)
-//    {
-//        if(*arman != '\0')
-//        {
-//            string = arman;
-//            arman = NULL;
-//        }
-//    }
+
 
     scanf("%s", order);
     switch (whichFunction(order))
@@ -608,6 +614,8 @@ void functioncaller(char *arman)
         case OPEN:
         {
             address = file_input();
+            if(address == NULL)
+                return FAILED;
             Open(address);
             break;
         }
@@ -615,7 +623,7 @@ void functioncaller(char *arman)
         {
             address = file_input();
             if(address == NULL)
-                break;
+                return FAILED;
             create_file(address);
             break;
         }
@@ -623,9 +631,17 @@ void functioncaller(char *arman)
         {
             address = file_input();
             if(address == NULL)
-                break;
-            if(string == NULL)
+                return FAILED;
+            if(arman_flag == -1)
+            {
+                string = (char*) calloc(SIZE, sizeof(char));
+                _read_(OUTPUT_NAME, string);
+                arman_flag = 0;
+            }
+            else if(string == NULL)
+            {
                 string = string_input();
+            }
             line_position = pos_input();
             insert_str(address, string, line_position[0], line_position[1]);
 
@@ -635,7 +651,7 @@ void functioncaller(char *arman)
         {
             address = file_input();
             if(address == NULL)
-                break;
+                return FAILED;
 
             cat(address,arman);
 
@@ -647,7 +663,7 @@ void functioncaller(char *arman)
         {
             address = file_input();
             if(address == NULL)
-                break;
+                return FAILED;
 
             line_position = pos_input();
             size = size_input();
@@ -660,7 +676,7 @@ void functioncaller(char *arman)
         {
             address = file_input();
             if(address == NULL)
-                break;
+                return FAILED;
 
             line_position = pos_input();
             size = size_input();
@@ -673,7 +689,7 @@ void functioncaller(char *arman)
         {
             address = file_input();
             if(address == NULL)
-                break;
+                return FAILED;
 
             line_position = pos_input();
             size = size_input();
@@ -686,7 +702,7 @@ void functioncaller(char *arman)
         {
             address = file_input();
             if(address == NULL)
-                break;
+                return FAILED;
 
             line_position = pos_input();
             paste(address, line_position[0], line_position[1]);
@@ -695,11 +711,19 @@ void functioncaller(char *arman)
         }
         case FIND:
         {
-            if(string == NULL)
+            if(arman_flag == -1)
+            {
+                string = (char*) calloc(SIZE, sizeof(char));
+                _read_(OUTPUT_NAME, string);
+                arman_flag = 0;
+            }
+            else if(string == NULL)
+            {
                 string = string_input();
+            }
             address = file_input();
             if(address == NULL)
-                break;
+                return FAILED;
 
             find_flags_arr = find_flags();
 
@@ -710,11 +734,18 @@ void functioncaller(char *arman)
         }
         case REPLACE:
         {
-            string = string_input();
+            if(arman_flag == -1)
+            {
+                string = (char*) calloc(SIZE, sizeof(char));
+                _read_(OUTPUT_NAME, string);
+                arman_flag = 0;
+            }
+            else if(string == NULL)
+                string = string_input();
             string1 = string_input();
             address = file_input();
             if(address == NULL)
-                break;
+                return FAILED;
 
             find_flags_arr = find_flags();
 
@@ -762,7 +793,7 @@ void functioncaller(char *arman)
         {
             address = file_input();
             if(address == NULL)
-                return;
+            return FAILED;
 
             auto_indent(address);
             break;
@@ -791,19 +822,18 @@ void functioncaller(char *arman)
 
             tree(depth, depth, arman);
 
-            _write_output(arman);
-
             chdir("..");
+
+            _write_output(arman);
             break;
         }
-//        case ARMAN:
-//        {
-//            char *arman_arr = (char *) calloc(SIZE, sizeof(char));
-//            functioncaller(arman_arr);
-//
-//            free(arman_arr);
-//            return;
-//        }
+        case ARMAN:
+        {
+            char *arman_arr = (char *) calloc(SIZE, sizeof(char));
+            arman_flag = 1;
+            free(arman_arr);
+            return;
+        }
         case EXIT:
         {
             exit(0);
@@ -829,6 +859,15 @@ void ClearBC()
 {
     SetCurser(0,HEIGHT + 2);
     SetLine(WHITE);
+//    SetCurser(0,HEIGHT + 3);
+//    SetLine(WHITE);
+//    SetCurser(0,HEIGHT + 2);
+}
+void ClearError()
+{
+    SetCurser(0,HEIGHT + 3);
+    SetLine(WHITE);
+    SetCurser(0, HEIGHT + 2);
 }
 
 void BarCommand()
@@ -848,12 +887,24 @@ void BarCommand()
 //            SetCurser(0,HEIGHT :::://;sdfakljl+ 2);
 //            SetLine(WHITE);
             functioncaller(arman_arr);
-            if(arman_arr[0] != '\0')
+            getch();
+            ClearError();
+            if(arman_arr[0] != '\0' && !arman_flag)
             {
-
                 ClearBC();
                 Open("/ooutput.txt");
             }
+            else if(arman_flag == 1)
+            {
+                arman_flag = -1;
+                functioncaller(arman_arr);
+                functioncaller(arman_arr);
+                arman_flag = 0;
+            }
+            ClearBC();
+        }
+        else
+        {
             ClearBC();
         }
     };
@@ -867,7 +918,7 @@ int main()
 {
     SetConsoleTitle("Vim");
     SetWindow(WIDTH, HEIGHT);
-    
+
     while(1)
         BarCommand();
 }
