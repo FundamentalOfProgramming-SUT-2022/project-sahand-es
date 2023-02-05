@@ -5,6 +5,8 @@
 #define WIDTH  80
 #define OUTPUT_NAME "ooutput.txt"
 #define OUTPUT_ADDRESS "/o:::output.txt"
+
+#define ESC 27
 int** positions;
 
 enum colors
@@ -249,17 +251,23 @@ void SetLine(int color)
 
 void SetName(const char* file_name, int saved)
 {
+    COORD first_cor = GetConsoleCursorPosition();
+
+    int x = first_cor.X;
+    int y = first_cor.Y;
+
     char unsaved[10] = {'\0'};
     if(saved == 1)
     {
-        strcat(unsaved, "   +");
+        strcat(unsaved, "   {unsaved}");
     }
     SetCurser(8,HEIGHT + 1);
     cPrint(GRAY_BG, "   ");
     cPrint(GRAY_BG,  file_name);
     cPrint(GRAY_BG, unsaved);
     SetLine(GRAY_BG);
-    SetCurser(0, 0);
+
+    SetCurser(x, y);
 }
 
 void SetMode(int mode)
@@ -343,7 +351,7 @@ void ShowText(const char *text, int startline)
     }
     if(k != strlen(text))
     {
-        sprintf(line_ps,"%d  ", line + 1 + startline);
+        sprintf(line_ps,"%d ", line + 1 + startline);
         cPrint(GRAY,line_ps);
         l = strlen(line_ps);
     }
@@ -359,7 +367,7 @@ void ShowText(const char *text, int startline)
             if(line == HEIGHT + 1)
                 break;
             if(line < 10)
-                sprintf(line_p,"%d  ", line + 1 + startline);
+                sprintf(line_p,"%d ", line + 1 + startline);
             else
                 sprintf(line_p,"%d ", line + 1 + startline);
 
@@ -382,7 +390,6 @@ void ShowText(const char *text, int startline)
         {
             positions[line][1] = position;
         }
-//        SetLine(128)
     }
     printf("\n");
     for(int a = line; a < HEIGHT; a++)
@@ -396,34 +403,139 @@ void ShowText(const char *text, int startline)
 }
 
 char InsertMode(const char* address)
-// to be developed:
 {
-    last_mode = VISUAL_MODE;
+    void ClearBC();
+    last_mode = INSERT_MODE;
 
     COORD first_cor = GetConsoleCursorPosition();
+    ClearBC();
 
     char *text = (char*) calloc(SIZE, sizeof(char));
+
     char ch;
+    int l = last_l;
     _read_(address + 1, text);
 
     SetMode(INSERT_MODE);
     SetName(file_name(address + 1), 0);
-    ShowText(text, 0);
+    ShowText(text, last_l);
+
+    if(first_cor.Y > HEIGHT)
+    {
+        first_cor.Y = 0;
+        first_cor.X = 3;
+    }
 
     SetCurser(first_cor.X, first_cor.Y);
 
-    while((ch = getch()) != ':' && ch != '/')
+    int NotSaved = 0;
+
+    while((ch = getch()) != ':' && ch != '/' && ch != ESC)
     {
+        if(!NotSaved)
+        {
+            SetName(file_name(address + 1), 1);
+            NotSaved = 1;
+        }
 
+        char *temp = (char*) calloc(SIZE, sizeof(char));
+        COORD coor = GetConsoleCursorPosition();
+        int num = posTocCharNum(text, coor.Y + last_l + 1, coor.X - positions[coor.Y][0]);
+
+        strncpy(temp, text, num);
+        temp[num] = '\0';
+        strncat(temp, &ch, 1);
+        strcat(temp, text + num);
+
+        free(text);
+        text = temp;
+        ShowText(text, last_l);
+
+        if(ch == '\b')
+        {
+            if(positions[coor.Y][0] == coor.X)
+            {
+                SetCurser(positions[coor.Y - 1][1], coor.Y-1);
+            }
+            else
+                SetCurser(coor.X - 1, coor.Y);
+        }
+        else
+        {
+            if(coor.X == WIDTH - 1)
+            {
+                SetCurser(positions[coor.Y + 1][0], coor.Y+1);
+            }
+            else
+                SetCurser(coor.X + 1, coor.Y);
+        }
+        if(NotSaved && coor.X == first_cor.X + 1 && coor.Y == first_cor.Y)
+        {
+            SetName(address+1, 0);
+            NotSaved = 0;
+        }
     }
+    if(ch == ESC && NotSaved == 1)
+    {
+        void ClearError();
+        SetCurser(0, HEIGHT + 3);
 
+        cPrint(BLUE,"Do you want to save your changes? //Press y for YES.");
+        char c = getch();
+        if(c == 'y')
+        {
+            ClearError();
+            SetCurser(0, HEIGHT + 3);
+
+            cPrint(BLUE,"Save As: //Press Enter to save. //Enter new name to save as.");
+            c = getch();
+            if(c == '\r')
+            {
+                copyToHiddenFile(address);
+                _write_(address + 1, text);
+                ClearError();
+                SetCurser(0, HEIGHT + 3);
+            }
+            else
+            {
+                char *new_name = (char*) calloc(SIZE, sizeof(char));
+                char *dir = (char*) calloc(SIZE, sizeof(char));
+                dir = file_dir(address + 1);
+
+                c = getche();
+                new_name = string_input();
+
+                copyToHiddenFile(address);
+                strcat(dir, new_name);
+                strcat(dir, ".txt");
+                _write_(address + 1, text);
+                int result = rename(address + 1, dir);
+                ClearError();
+                SetCurser(0, HEIGHT + 3);
+
+
+                if(!result)
+                    errorOutput("ERROR: Changes saves but namefile did not changed.");
+                ClearError();
+                SetCurser(0, HEIGHT + 3);
+
+            }
+        }
+        ClearError();
+        SetCurser(0, HEIGHT + 3);
+    }
+    last_l = l;
+    return ch;
 }
 
 char VisualMode(const char* address)
 {
+    void ClearBC();
+
     last_mode = VISUAL_MODE;
 
     COORD first_cor = GetConsoleCursorPosition();
+    ClearBC();
     char *text = (char*) calloc(SIZE, sizeof(char));
     _read_(address + 1, text);
 
@@ -510,6 +622,8 @@ char VisualMode(const char* address)
 
 char NormalMode(const char* address)
 {
+    void ClearBC();
+
     last_mode = NORMAL_MODE;
 
     char *text = (char*) calloc(SIZE, sizeof(char));
@@ -517,6 +631,7 @@ char NormalMode(const char* address)
     _read_(address + 1, text);
     int l = last_l;
     COORD first_cor = GetConsoleCursorPosition();
+    ClearBC();
 
     SetMode(NORMAL_MODE);
     SetName(file_name(address + 1), 0);
@@ -528,7 +643,7 @@ char NormalMode(const char* address)
     }
     SetCurser(first_cor.X, first_cor.Y);
 
-    while((ch = getch()) != ':' && ch != '/' && ch != 'i' && ch != 'v')
+    while((ch = getch()) != ':' && ch != '/' && ch != 'i' && ch != 'v' && ch != 'u' && ch != '=')
     {
         int render = Navigator(ch, l, text);
         if(render != _NOCHANGE)
@@ -549,11 +664,21 @@ char ModeChanger(char ch, const char* address)
             if(ch == 'i')
                 ch = InsertMode(address);
             else if(ch == 'v')
-                ch =VisualMode(address);
+                ch = VisualMode(address);
             else if(ch == ':' || ch == '/')
             {
                 ClearBC();
                 BarCommand();
+            }
+            else if(ch == 'u')
+            {
+                undo(address);
+                ch = NormalMode(address);
+            }
+            else if(ch == '=')
+            {
+                auto_indent(address);
+                ch = NormalMode(address);
             }
             break;
         }
@@ -571,6 +696,19 @@ char ModeChanger(char ch, const char* address)
             {
                 ClearBC();
                 BarCommand();
+            }
+            break;
+        }
+        case INSERT_MODE:
+        {
+            if(ch == ':' || ch == '/')
+            {
+                ClearBC();
+                BarCommand();
+            }
+            else if(ch == ESC)
+            {
+                ch = NormalMode(address);
             }
         }
     }
@@ -832,7 +970,7 @@ int functioncaller(char *arman)
             char *arman_arr = (char *) calloc(SIZE, sizeof(char));
             arman_flag = 1;
             free(arman_arr);
-            return;
+            return DONE;
         }
         case EXIT:
         {
@@ -842,8 +980,8 @@ int functioncaller(char *arman)
         {
             char c;
             while ((c = getchar()) != '\n');
-            errorOutput("ERROR: Invalid command.\n");
-            return;
+            errorOutput("ERROR: Invalid command.");
+            return FAILED;
         }
 
     }
@@ -863,6 +1001,7 @@ void ClearBC()
 //    SetLine(WHITE);
 //    SetCurser(0,HEIGHT + 2);
 }
+
 void ClearError()
 {
     SetCurser(0,HEIGHT + 3);
@@ -883,9 +1022,6 @@ void BarCommand()
         else if(ch == ':')
         {
             char *arman_arr = (char *) calloc(SIZE, sizeof(char));
-//            cPrint(WHITE, ":");
-//            SetCurser(0,HEIGHT :::://;sdfakljl+ 2);
-//            SetLine(WHITE);
             functioncaller(arman_arr);
             getch();
             ClearError();

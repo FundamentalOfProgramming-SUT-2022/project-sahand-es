@@ -11,7 +11,7 @@
 #include <dirent.h>
 
 
-#define SIZE 1000000
+#define SIZE 999999
 
 enum FIND_TYPES {COUNT = 1, AT = 1 << 1, BYWORD = 1 << 2, ALL = 1 << 3};
 
@@ -200,7 +200,7 @@ void create_file(char address[])
 
     if(fileExists(dirname))
     {
-        errorOutput("ERROR: file with this name exists.\n");
+        errorOutput("ERROR: file with this name exists.");
         return;
     }
     else
@@ -233,7 +233,7 @@ void insert_str(const char address[],const char string[], int line, int position
 
     if(!fileExists(name))
     {
-        errorOutput("ERORR: file with this name does not exists.\n");
+        errorOutput("ERORR: file with this name does not exists.");
         return;
     }
 
@@ -310,7 +310,7 @@ void cat(const char address[], char *arman)
     char *name = (char*) address + 1, c;
     if(!fileExists(name))
     {
-        errorOutput("ERROR: File with this name does not exists.\n");
+        errorOutput("ERROR: File with this name does not exists.");
         return;
     }
 
@@ -341,7 +341,7 @@ void remove_str(const char address[], int line, int position, int size, char b_f
     char*name = (char*) address + 1, c;
     if(!fileExists(name))
     {
-        errorOutput("ERROR: File with this name does not exists.\n");
+        errorOutput("ERROR: File with this name does not exists.");
         return;
     }
     int line_counter = 0, position_counter = 0, iter = 0, flag = 0;
@@ -360,7 +360,7 @@ void remove_str(const char address[], int line, int position, int size, char b_f
                 }
                 if(c == EOF)
                 {
-                    errorOutput("ERORR: Empty line.\n");
+                    errorOutput("ERORR: Empty line.");
                     return;
                 }
             }
@@ -427,7 +427,7 @@ void copy_str(const char address[], int line, int position, int size, char b_f_f
     int line_counter = 0, position_counter = 0;
     if(!fileExists(name))
     {
-        errorOutput("ERROR: File with this name does not exists.\n");
+        errorOutput("ERROR: File with this name does not exists.");
         return;
     }
 
@@ -443,7 +443,7 @@ void copy_str(const char address[], int line, int position, int size, char b_f_f
         }
         if(c == EOF)
         {
-            errorOutput("ERORR: Empty line.\n");
+            errorOutput("ERORR: Empty line.");
             return;
         }
     }
@@ -600,7 +600,7 @@ int **regex(const char* address, const char* pattern)
 {
     if(!fileExists(address + 1))
     {
-        errorOutput("ERROR: File with this name does not exists.\n");
+        errorOutput("ERROR: File with this name does not exists.");
         return NULL;
     }
     char *name = (char*) address + 1;
@@ -709,7 +709,7 @@ void find(const char address[], const char pattern[], int flag, int at, char *ar
 {
     if(!fileExists(address + 1))
     {
-        errorOutput("ERROR: File with this name does not exists.\n");
+        errorOutput("ERROR: File with this name does not exists.");
         return;
     }
     int **result = regex(address, pattern);
@@ -854,7 +854,7 @@ void find(const char address[], const char pattern[], int flag, int at, char *ar
         }
         default:
         {
-            errorOutput("ERROR: Invalid flags for find function.\n");
+            errorOutput("ERROR: Invalid flags for find function.");
             free(result);
             return;
         }
@@ -876,7 +876,7 @@ void replace_str(const char address[], const char pattern[], const char replace[
 
     if(!fileExists(name))
     {
-        errorOutput("ERROR: File with this name does not exists.\n");
+        errorOutput("ERROR: File with this name does not exists.");
         return;
     }
 
@@ -912,7 +912,7 @@ void replace_str(const char address[], const char pattern[], const char replace[
         {
             if(nmatch < at)
             {
-                errorOutput("ERROR: \'AT\' index is bigger than occurrence of pattern.\n");
+                errorOutput("ERROR: \'AT\' index is bigger than occurrence of pattern.");
                 free(result);
                 return;
             }
@@ -935,13 +935,13 @@ void replace_str(const char address[], const char pattern[], const char replace[
         }
         case AT | ALL:
         {
-            errorOutput("ERROR: Invalid flags, don't use \'ALL\' & \'AT\' flags together.\n");
+            errorOutput("ERROR: Invalid flags, don't use \'ALL\' & \'AT\' flags together.");
             free(result);
             return;
         }
         default:
         {
-            errorOutput("ERROR: Invalid flags for replace_str.\n");
+            errorOutput("ERROR: Invalid flags for replace_str.");
             free(result);
             return;
         }
@@ -972,6 +972,20 @@ char *file_name(char* name)
     return name + last_slash + 1;
 }
 
+char *file_dir(char* name)
+{
+    int last_slash = 0;
+    for(int i = 0; name[i] !='\0'; i++)
+    {
+        if(name[i] == '/')
+        {
+            last_slash = i;
+        }
+    }
+    *(name + last_slash) = '\0';
+    return name;
+}
+
 void grep(int files_count, const char **address, char* pattern, char l_c_flag, char *arman)
 {
 
@@ -987,7 +1001,7 @@ void grep(int files_count, const char **address, char* pattern, char l_c_flag, c
 
         if(!fileExists(name))
         {
-            errorOutput("ERROR: File with this name does not exists.\n");
+            errorOutput("ERROR: File with this name does not exists.");
             return;
         }
         _read_(name, text);
@@ -1061,7 +1075,7 @@ void grep(int files_count, const char **address, char* pattern, char l_c_flag, c
         }
         default:
         {
-            errorOutput("ERROR: Invalid flags for grep.\n");
+            errorOutput("ERROR: Invalid flags for grep.");
             break;
         }
     }
@@ -1084,7 +1098,7 @@ void auto_indent(const char* address)
 {
     if(!fileExists(address + 1))
     {
-        errorOutput("ERROR: File with this name does not exists.\n");
+        errorOutput("ERROR: File with this name does not exists.");
         return;
     }
     int open_count = 0, open_flag = 0, close_flag = 0;
@@ -1188,12 +1202,12 @@ void auto_indent(const char* address)
 
 int oneDiffrencePrint(const char* text1_line, const char* text2_line, int line, char *arman)
 {
-    char** words1 = (char **) calloc(SIZE, sizeof (char*));
-    char** words2 = (char **) calloc(SIZE, sizeof (char*));
-    for(int i = 0; i < SIZE; i++)
+    char** words1 = (char **) calloc(10000, sizeof (char*));
+    char** words2 = (char **) calloc(10000, sizeof (char*));
+    for(int i = 0; i < 10000; i++)
     {
-        *(words1 + i) = (char*) calloc(SIZE, sizeof (char));
-        *(words2 + i) = (char*) calloc(SIZE, sizeof (char));
+        *(words1 + i) = (char*) calloc(10000, sizeof (char));
+        *(words2 + i) = (char*) calloc(10000, sizeof (char));
     }
     int start = 0;
     int c1 = 0, c2 = 0, diff = 0, diff_count = 0;
@@ -1247,7 +1261,11 @@ int oneDiffrencePrint(const char* text1_line, const char* text2_line, int line, 
             diff_count++;
         }
     }
-    printf("============ #%d ============\n", line);
+    if(arman == NULL)
+        printf("================= #%d ================\n", line);
+    else
+        sprintf(arman + strlen(arman),"================ #%d ================\n", line);
+
     for(int i = 0; i < c1; i++)
     {
         if(arman == NULL)
@@ -1308,12 +1326,12 @@ void text_comparator(const char* address1, const char* address2, char *arman)
 {
     if(!fileExists(address1 + 1))
     {
-        errorOutput("ERROR: First file: file with this name does not exists.\n");
+        errorOutput("ERROR: First file: file with this name does not exists.");
         return;
     }
     if(!fileExists(address2 + 1))
     {
-        errorOutput("ERROR: Second file: file with this name does not exists.\n");
+        errorOutput("ERROR: Second file: file with this name does not exists.");
         return;
     }
     char *text1 = (char*) calloc(SIZE, sizeof (char));
@@ -1391,16 +1409,16 @@ void text_comparator(const char* address1, const char* address2, char *arman)
                     sprintf(arman + strlen(arman),"%s\n", text1_line);
                 }
             }
-            else if(!oneDiffrencePrint(text1_line, text2_line,line_counter1, NULL))
+            else if(!oneDiffrencePrint(text1_line, text2_line,line_counter1, arman))
             {
                 if(arman == NULL)
                 {
-                    printf("============ #%d ============\n", line_counter1);
+                    printf("================ #%d ===============\n", line_counter1);
                     printf("%s\n%s\n",text1_line, text2_line);
                 }
                 else
                 {
-                    sprintf(arman + strlen(arman),"============ #%d ============\n", line_counter1);
+                    sprintf(arman + strlen(arman),"================ #%d ================\n", line_counter1);
                     sprintf(arman + strlen(arman),"%s\n%s\n",text1_line, text2_line);
                 }
             }
@@ -1415,7 +1433,7 @@ void tree(int depth, int first_depth, char *arman)
 {
     if(first_depth < -1)
     {
-        errorOutput("ERROR: Invalid depth for tree.\n");
+        errorOutput("ERROR: Invalid depth for tree.");
         return;
     }
     struct dirent *entry;
@@ -1427,7 +1445,7 @@ void tree(int depth, int first_depth, char *arman)
     folder = opendir(".");
     if(folder == NULL)
     {
-        errorOutput("ERORR: Unable to read directory\n");
+        errorOutput("ERORR: Unable to read directory.");
         return;
     }
 

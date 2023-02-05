@@ -18,7 +18,8 @@ enum ORDERS
     COMPARE,
     TREE,
     ARMAN,
-    EXIT
+    EXIT,
+    UNDO_SC
 };
 
 int whichFunction(const char* order)
@@ -138,7 +139,7 @@ char *grep_files_input()
             }
             if(i == SIZE)
             {
-                errorOutput("ERORR: Input size limit exceeded.\n");
+                errorOutput("ERORR: Input size limit exceeded.");
                 return NULL;
             }
         }
@@ -146,7 +147,7 @@ char *grep_files_input()
     }
     else
     {
-        errorOutput("ERROR: Invalid file address\n");
+        errorOutput("ERROR: Invalid file address.");
         return NULL;
     }
 
@@ -189,7 +190,7 @@ char *file_input()
             }
             if(i == SIZE)
             {
-                errorOutput("ERORR: Input size limit exceeded.\n");
+                errorOutput("ERORR: Input size limit exceeded.");
                 return NULL;
             }
         }
@@ -197,7 +198,7 @@ char *file_input()
     }
     else
     {
-        errorOutput("ERROR: Invalid file address\n");
+        errorOutput("ERROR: Invalid file address.");
         while(c != '\n')
         {
             c = getchar();
@@ -285,13 +286,13 @@ char *string_input()
         }
         if(i == SIZE)
         {
-            errorOutput("ERORR: Input size limit exceeded.\n");
+            errorOutput("ERORR: Input size limit exceeded.");
             return NULL;
         }
     }
     else
     {
-        errorOutput("ERROR: Invalid string\n");
+        errorOutput("ERROR: Invalid string.");
         return NULL;
     }
     return string;
