@@ -588,6 +588,8 @@ int byWord(const char text[], int offset)
         i++;
     }
     int count = 0;
+    if(!isSeperator(text[0]))
+        count++;
     for(; i < offset; i++)
     {
         if ((text[i] == ' ' || text[i] == '\n')&& text[i+1] != ' ')

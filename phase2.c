@@ -1,8 +1,8 @@
 #include "phase1.c"
 #include <conio.h>
 
-#define HEIGHT 20
-#define WIDTH  80
+#define HEIGHT 30
+#define WIDTH  100
 #define OUTPUT_NAME "ooutput.txt"
 #define OUTPUT_ADDRESS "/o:::output.txt"
 
@@ -643,7 +643,7 @@ char NormalMode(const char* address)
     }
     SetCurser(first_cor.X, first_cor.Y);
 
-    while((ch = getch()) != ':' && ch != '/' && ch != 'i' && ch != 'v' && ch != 'u' && ch != '=')
+    while((ch = getch()) != ':' && ch != '/' && ch != 'i' && ch != 'v' && ch != 'u' && ch != '=' && ch != 'p')
     {
         int render = Navigator(ch, l, text);
         if(render != _NOCHANGE)
@@ -678,6 +678,12 @@ char ModeChanger(char ch, const char* address)
             else if(ch == '=')
             {
                 auto_indent(address);
+                ch = NormalMode(address);
+            }
+            else if(ch == 'p')
+            {
+                COORD coor = GetConsoleCursorPosition();
+                paste(address, coor.Y + last_l + 1, coor.X - positions[coor.Y][0]);
                 ch = NormalMode(address);
             }
             break;
